@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Noche de guardia · Simulador docente de urgencias oftalmológicas</title>
+<meta name="description" content="Seis guardias ficticias de oftalmología. Información incompleta y una IA que se equivoca a propósito. Prototipo docente para residentes.">
+<meta name="theme-color" content="#0b1020">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230b1020'/%3E%3Cellipse cx='32' cy='32' rx='22' ry='13' fill='none' stroke='%23f5b942' stroke-width='5'/%3E%3Ccircle cx='32' cy='32' r='7' fill='%23f5b942'/%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#0b1020; --bg2:#111831; --card:#151d38; --card2:#1b2546; --line:#27325a;
+  --ink:#eef1fb; --mute:#a3acc9; --dim:#7680a3;
+  --amber:#f5b942; --amber-ink:#2a1d00;
+  --ok:#3ecf8e; --ok-bg:rgba(62,207,142,.12);
+  --mid:#f5b942; --mid-bg:rgba(245,185,66,.12);
+  --bad:#ff6b6b; --bad-bg:rgba(255,107,107,.12);
+  --ai:#9b8cff; --ai-bg:rgba(155,140,255,.12);
+  --r:16px;
+  --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+*{box-sizing:border-box}
+html{font-size:16px;-webkit-text-size-adjust:100%}
+html.proj{font-size:20px}
+body{margin:0;background:radial-gradient(1200px 600px at 80% -10%,#1a2350 0%,transparent 60%),var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.5;min-height:100vh}
+button{font:inherit;color:inherit;cursor:pointer}
+a{color:var(--amber)}
+.wrap{max-width:760px;margin:0 auto;padding:0 16px}
+header.top{position:sticky;top:0;z-index:20;background:rgba(11,16,32,.88);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+header.top .wrap{display:flex;align-items:center;gap:10px;height:56px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:.08em;font-size:.82rem;text-transform:uppercase;background:none;border:0;padding:0}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--amber);box-shadow:0 0 0 0 rgba(245,185,66,.6);animation:pulse 2s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(245,185,66,.55)}70%{box-shadow:0 0 0 10px rgba(245,185,66,0)}100%{box-shadow:0 0 0 0 rgba(245,185,66,0)}}
+.spacer{flex:1}
+.iconbtn{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:6px 10px;font-size:.8rem;color:var(--mute)}
+.iconbtn[aria-pressed=true]{color:var(--amber-ink);background:var(--amber);border-color:var(--amber)}
+.demo-banner{display:none;background:var(--ai);color:#120c3a;text-align:center;font-weight:700;font-size:.85rem;padding:8px}
+.demo-banner.on{display:block}
+
+/* home */
+.hero{padding:40px 0 18px}
+.kicker{font-family:var(--mono);font-size:.75rem;color:var(--amber);letter-spacing:.06em;text-transform:uppercase}
+h1{font-size:clamp(1.9rem,6.5vw,2.9rem);line-height:1.08;margin:.35em 0 .45em;letter-spacing:-.02em}
+h1 em{font-style:normal;color:var(--amber)}
+.lead{color:var(--mute);font-size:1.05rem;max-width:36em}
+.ctas{display:flex;gap:10px;flex-wrap:wrap;margin:22px 0 6px}
+.btn{border:0;border-radius:12px;padding:13px 18px;font-weight:700;font-size:1rem;display:inline-flex;align-items:center;gap:8px}
+.btn.primary{background:var(--amber);color:var(--amber-ink)}
+.btn.ghost{background:transparent;border:1px solid var(--line);color:var(--ink)}
+.btn:disabled{opacity:.38;cursor:not-allowed}
+.btn.block{width:100%;justify-content:center}
+.small{font-size:.82rem;color:var(--dim)}
+h2{font-size:1.25rem;margin:38px 0 12px;letter-spacing:-.01em}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+.casecard{text-align:left;background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px;transition:transform .15s,border-color .15s;position:relative}
+.casecard:hover{transform:translateY(-2px);border-color:var(--amber)}
+.casecard .t{font-family:var(--mono);color:var(--amber);font-size:.85rem}
+.casecard .a{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--dim);margin-left:8px}
+.casecard h3{margin:6px 0 2px;font-size:1.05rem}
+.casecard .done{position:absolute;top:14px;right:14px;font-size:.75rem;font-family:var(--mono);color:var(--ok)}
+.skills{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px}
+.skill{background:var(--bg2);border:1px solid var(--line);border-radius:14px;padding:14px}
+.skill b{display:block;margin-bottom:2px}
+.skill span{color:var(--mute);font-size:.88rem}
+.rules{background:var(--bg2);border:1px solid var(--line);border-left:4px solid var(--amber);border-radius:12px;padding:14px 16px}
+.rules ul{margin:0;padding-left:18px;color:var(--mute)}
+.rules li{margin:4px 0}
+.prompt{background:#0a0f1e;border:1px solid var(--line);border-radius:12px;padding:14px;font-family:var(--mono);font-size:.8rem;white-space:pre-wrap;color:#cfd5ec;max-height:260px;overflow:auto}
+.steps-made{counter-reset:s;list-style:none;padding:0;margin:0}
+.steps-made li{counter-increment:s;position:relative;padding:8px 0 8px 40px;color:var(--mute);border-bottom:1px dashed var(--line)}
+.steps-made li::before{content:counter(s);position:absolute;left:0;top:8px;width:26px;height:26px;border-radius:50%;background:var(--card2);color:var(--amber);font-family:var(--mono);font-size:.8rem;display:grid;place-items:center}
+.steps-made b{color:var(--ink)}
+footer{margin:40px 0 30px;color:var(--dim);font-size:.8rem}
+.status{display:inline-block;font-family:var(--mono);font-size:.72rem;padding:3px 8px;border-radius:6px;background:var(--mid-bg);color:var(--mid);border:1px solid rgba(245,185,66,.35)}
+
+/* case */
+.casebar{display:flex;align-items:center;gap:10px;padding:14px 0 8px;flex-wrap:wrap}
+.chip{font-family:var(--mono);font-size:.78rem;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:4px 10px;color:var(--mute)}
+.chip.clock{color:var(--amber);border-color:rgba(245,185,66,.4)}
+.prog{display:flex;gap:4px;margin:2px 0 14px}
+.prog i{flex:1;height:4px;border-radius:4px;background:var(--line)}
+.prog i.on{background:var(--amber)}
+.prog i.cur{background:linear-gradient(90deg,var(--amber),var(--line))}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:18px;margin-bottom:14px;animation:rise .25s ease}
+@keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.card h3{margin:0 0 4px;font-size:1.15rem}
+.card .q{color:var(--mute);margin:0 0 14px}
+.pager{background:linear-gradient(135deg,#1d2650,#141b37);border:1px solid #33407a}
+.pager .bip{font-family:var(--mono);color:var(--amber);font-size:.8rem;letter-spacing:.08em}
+.pager .msg{font-size:1.15rem;font-weight:700;margin:8px 0 12px}
+.patient{background:rgba(0,0,0,.2);border-radius:12px;padding:12px 14px;color:var(--ink)}
+.opts{display:grid;gap:8px}
+.opt{text-align:left;background:var(--bg2);border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;display:flex;gap:10px;align-items:flex-start;transition:border-color .12s,background .12s}
+.opt:hover:not(:disabled){border-color:#4a5893}
+.opt .box{flex:none;width:22px;height:22px;border-radius:6px;border:2px solid #4a5893;display:grid;place-items:center;font-size:.8rem;margin-top:1px}
+.opt.radio .box{border-radius:50%}
+.opt.sel{border-color:var(--amber);background:rgba(245,185,66,.08)}
+.opt.sel .box{background:var(--amber);border-color:var(--amber);color:var(--amber-ink)}
+.opt:disabled{cursor:default}
+.opt.ok{border-color:var(--ok);background:var(--ok-bg)}
+.opt.mid{border-color:var(--mid);background:var(--mid-bg)}
+.opt.bad{border-color:var(--bad);background:var(--bad-bg)}
+.opt.faded{opacity:.55}
+.opt .body{flex:1}
+.res{margin-top:6px;font-size:.92rem;color:var(--ink)}
+.note{margin-top:4px;font-size:.85rem;color:var(--mute)}
+.tag{display:inline-block;font-size:.68rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:2px 7px;border-radius:5px;margin-right:6px;vertical-align:1px}
+.tag.key{background:var(--ok-bg);color:var(--ok)}
+.tag.useful{background:rgba(120,170,255,.14);color:#8fb5ff}
+.tag.neutral{background:rgba(160,170,200,.12);color:var(--mute)}
+.tag.harm{background:var(--bad-bg);color:var(--bad)}
+.counter{font-family:var(--mono);font-size:.8rem;color:var(--dim);margin:10px 0 0}
+.actions{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap}
+.missed{margin-top:14px;border-top:1px dashed var(--line);padding-top:12px}
+.missed h4{margin:0 0 8px;font-size:.9rem;color:var(--ok)}
+.ai{border-color:rgba(155,140,255,.45);background:linear-gradient(180deg,rgba(155,140,255,.08),transparent 60%),var(--card)}
+.ai .who{display:flex;align-items:center;gap:8px;font-weight:700;color:var(--ai);font-size:.9rem}
+.ai .who .bot{width:26px;height:26px;border-radius:8px;background:var(--ai-bg);display:grid;place-items:center}
+.ai .conf{font-family:var(--mono);font-size:.72rem;color:var(--dim);margin-left:auto}
+.ai .task{margin:12px 0;font-weight:700}
+.conf-row{margin-top:14px}
+.conf-row .lbl{font-size:.85rem;color:var(--mute);margin-bottom:6px}
+.confs{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.confs button{background:var(--bg2);border:1.5px solid var(--line);border-radius:10px;padding:8px 0;font-family:var(--mono);font-weight:700}
+.confs button.sel{background:var(--amber);border-color:var(--amber);color:var(--amber-ink)}
+.confs-legend{display:flex;justify-content:space-between;font-size:.72rem;color:var(--dim);margin-top:4px}
+.fb{border-radius:12px;padding:12px 14px;margin-top:14px}
+.fb.ok{background:var(--ok-bg);border:1px solid rgba(62,207,142,.4)}
+.fb.mid{background:var(--mid-bg);border:1px solid rgba(245,185,66,.4)}
+.fb.bad{background:var(--bad-bg);border:1px solid rgba(255,107,107,.4)}
+.fb b{display:block;margin-bottom:2px}
+.isbar{display:grid;gap:6px;margin-top:12px}
+.isbar div{display:flex;gap:10px;align-items:flex-start;background:var(--bg2);border-radius:10px;padding:8px 10px}
+.isbar .L{flex:none;width:26px;height:26px;border-radius:7px;background:var(--amber);color:var(--amber-ink);font-weight:800;display:grid;place-items:center;font-family:var(--mono)}
+.score{display:flex;align-items:baseline;gap:8px}
+.score .n{font-size:2.6rem;font-weight:800;font-family:var(--mono);color:var(--amber);line-height:1}
+.bar{height:8px;background:var(--line);border-radius:8px;overflow:hidden;margin:10px 0 4px}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--amber),#ffd98a)}
+.cols{display:grid;gap:10px;grid-template-columns:1fr;margin-top:6px}
+@media(min-width:620px){.cols{grid-template-columns:1fr 1fr}}
+.col{background:var(--bg2);border-radius:12px;padding:12px 14px;border:1px solid var(--line)}
+.col h4{margin:0 0 6px;font-size:.78rem;text-transform:uppercase;letter-spacing:.08em}
+.col ul{margin:0;padding-left:18px;color:var(--ink)}
+.col li{margin:3px 0;font-size:.93rem}
+.col.k h4{color:var(--ok)} .col.a h4{color:var(--ai)} .col.r{border-color:rgba(255,107,107,.35)} .col.r h4{color:var(--bad)}
+.col.r{grid-column:1/-1}
+.pearl{background:linear-gradient(135deg,rgba(245,185,66,.14),rgba(245,185,66,.04));border:1px solid rgba(245,185,66,.35);border-radius:12px;padding:12px 14px;margin-top:10px}
+.calib{margin-top:10px;font-size:.92rem;color:var(--mute)}
+.calib b{color:var(--ink)}
+.flash{outline:3px solid var(--ai);outline-offset:2px;transition:outline .2s}
+.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--ok);color:#03281a;font-weight:700;padding:10px 16px;border-radius:10px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:50}
+.toast.on{opacity:1}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <button class="brand" data-act="home" aria-label="Inicio"><span class="dot"></span>Noche de guardia</button>
+    <span class="spacer"></span>
+    <button class="iconbtn" id="projBtn" aria-pressed="false" title="Letra grande para proyectar">A+</button>
+    <button class="iconbtn" data-act="home">Inicio</button>
+  </div>
+  <div class="demo-banner" id="demoBanner" role="status">Demo automática · toca la pantalla para detenerla</div>
+</header>
+<main class="wrap" id="app" aria-live="polite"></main>
+<div class="toast" id="toast"></div>
+
+<script>
+// Casos 100 % ficticios. Sin dosis. Revisión clínica independiente pendiente.
+// tag: key (clave) | useful (útil) | neutral (no aporta ahora) | harm (perjudicial)
+window.CASES = [
+{
+  id: "glaucoma", area: "Glaucoma", time: "02:40", box: "Box 3",
+  title: "Cefalea con vómitos",
+  pager: "Te la deriva urgencias generales: «cefalea intensa con vómitos, el ojo derecho muy rojo».",
+  patient: "Mujer, 67 años. Dolor intenso en el ojo derecho desde hace 3 horas, visión borrosa, náuseas y un vómito. TA 165/95.",
+  steps: [
+    { type: "ask", title: "Anamnesis dirigida", prompt: "Tienes tiempo para tres preguntas. ¿Cuáles haces?", max: 3, items: [
+      { label: "¿Ve halos de colores alrededor de las luces?", result: "Sí, desde la tarde, al salir del cine.", tag: "key", note: "Halos por edema corneal. Y la penumbra del cine dilata la pupila: desencadenante clásico." },
+      { label: "¿Usa gafas? ¿De lejos o de cerca?", result: "Gafas de lejos «muy gordas» desde joven. Hipermétrope de +5.", tag: "key", note: "Ojo corto, cámara estrecha: el terreno del cierre angular." },
+      { label: "¿Ha empezado algún medicamento?", result: "Un antigripal desde ayer.", tag: "useful", note: "Algunos antigripales llevan antihistamínicos o simpaticomiméticos que pueden favorecer el cierre." },
+      { label: "¿Tiene migraña?", result: "Alguna cefalea tensional. Nunca así.", tag: "neutral", note: "No cambia lo que tienes que hacer ahora." },
+      { label: "¿La han operado de cataratas?", result: "No.", tag: "useful", note: "Sigue siendo fáquica: el cristalino forma parte del problema." },
+      { label: "¿Toma anticoagulantes?", result: "No.", tag: "neutral", note: "No es lo urgente en este cuadro." }
+    ]},
+    { type: "ask", title: "Exploración", prompt: "Elige tres exploraciones.", max: 3, items: [
+      { label: "Tonometría", result: "OD 58 mmHg. OI 16 mmHg.", tag: "key", note: "El dato que lo cambia todo." },
+      { label: "Biomicroscopía", result: "OD: inyección ciliar, edema corneal microquístico, cámara anterior muy estrecha, pupila en midriasis media arreactiva.", tag: "key", note: "La tríada del cierre angular agudo." },
+      { label: "Ángulo del ojo adelfo (Van Herick / gonioscopia)", result: "OI: ángulo estrecho, potencialmente ocluible.", tag: "key", note: "El otro ojo tiene el mismo riesgo." },
+      { label: "Agudeza visual", result: "OD 0,1. OI 0,8.", tag: "useful", note: "Útil para documentar, no decide el tratamiento." },
+      { label: "Dilatar para ver el fondo de ojo", result: "No es buena idea ahora.", tag: "harm", note: "La midriasis puede empeorar el cierre y desencadenarlo en el ojo adelfo. El fondo se valora cuando la córnea se aclare." },
+      { label: "Pedir TC craneal", result: "Sin hallazgos agudos (tras 2 horas de espera).", tag: "harm", note: "El cuadro ocular explica los síntomas. Pedirlo retrasa el tratamiento." }
+    ]},
+    { type: "ai", intro: "El asistente de IA del hospital (ficticio) resume el caso:", claims: [
+      "Cuadro compatible con cierre angular agudo primario en el ojo derecho.",
+      "La hipermetropía y la cámara estrecha son factores de riesgo.",
+      "Antes de tratar, dilata ambos ojos para valorar el nervio óptico.",
+      "El ojo izquierdo también está en riesgo y hay que tratarlo."
+    ], wrong: 2, contradiction: "Pupila en midriasis media y ángulo ocluible en el adelfo.", explain: "Dilatar puede empeorar el cierre en el ojo derecho y provocarlo en el izquierdo. El nervio óptico puede esperar; la PIO no." },
+    { type: "decide", title: "Primera decisión", question: "¿Qué haces primero?", options: [
+      { text: "Bajar la PIO con tratamiento médico tópico y sistémico según el protocolo del centro, con analgesia y antiemético.", score: 2, fb: "Correcto. Primero baja la presión y aclara la córnea." },
+      { text: "Iridotomía láser inmediata.", score: 1, fb: "Es el tratamiento definitivo, pero con la córnea edematosa no suele ser técnicamente posible. Primero, tratamiento médico." },
+      { text: "Remitir a neurología por cefalea con vómitos.", score: 0, fb: "El ojo explica todo el cuadro. Cada hora con 58 mmHg daña el nervio óptico." },
+      { text: "Colirio de corticoide y revisión mañana.", score: 0, fb: "Trata la inflamación y deja sin tratar la presión." }
+    ]},
+    { type: "decide", title: "Segunda decisión", question: "Una hora después: PIO de 24 mmHg en el OD y córnea más clara. ¿Plan?", options: [
+      { text: "Iridotomía láser en el OD en cuanto la córnea lo permita, y profiláctica en el OI.", score: 2, fb: "Correcto. Resuelves el bloqueo pupilar y proteges el ojo adelfo." },
+      { text: "Iridotomía solo en el OD; el OI no tiene síntomas.", score: 1, fb: "Te falta el ojo adelfo, que tiene un riesgo alto de sufrir un ataque en los próximos años." },
+      { text: "Valorar con el adjunto la extracción del cristalino.", score: 1, fb: "Es una opción válida (estudio EAGLE), sobre todo con catarata o cristalino grueso. Lo urgente es asegurar los dos ojos." },
+      { text: "Alta con hipotensores y control en un mes.", score: 0, fb: "El mecanismo sigue ahí. Sin iridotomía o cirugía, puede repetirse." }
+    ]},
+    { type: "isbar", prompt: "Llamas al adjunto a las 3 de la mañana. Tienes 30 segundos. ¿Qué tres datos le das?", pick: 3, items: [
+      { text: "PIO de 58 mmHg en el OD que baja a 24 con tratamiento médico", key: true },
+      { text: "Edema corneal, cámara estrecha y pupila arreactiva", key: true },
+      { text: "Ángulo ocluible en el ojo izquierdo", key: true },
+      { text: "TA 165/95", key: false },
+      { text: "Toma un antigripal desde ayer", key: false },
+      { text: "Ha vomitado una vez", key: false },
+      { text: "Le duele desde que salió del cine", key: false }
+    ], model: [
+      ["I", "Soy el R4 de guardia. Te llamo por una paciente de 67 años en el box 3."],
+      ["S", "Cierre angular agudo en el OD: PIO de 58 mmHg."],
+      ["B", "Hipermétrope de +5, fáquica. Empezó tras estar en un cine a oscuras."],
+      ["A", "Con tratamiento médico baja a 24 y la córnea se aclara. El OI tiene el ángulo ocluible."],
+      ["R", "Te propongo iridotomía láser bilateral en cuanto la córnea lo permita. ¿Lo hacemos esta noche o a primera hora?"]
+    ]},
+  ],
+  debrief: {
+    knew: ["PIO de 58 mmHg con cámara estrecha y edema corneal.", "Ángulo ocluible en el ojo adelfo."],
+    assumed: ["Que el desencadenante fue la penumbra del cine o el antigripal: es plausible, pero no está demostrado."],
+    redflags: ["Cefalea y vómitos con ojo rojo: mide la PIO antes de pensar en el cerebro.", "Nunca dilates un ojo con sospecha de cierre angular.", "Trata siempre el ojo adelfo."],
+    pearl: "Sin tratamiento, entre el 40 y el 80 % de los ojos adelfos sufren un ataque en los 5–10 años siguientes. La iridotomía profiláctica es parte del tratamiento, no un extra."
+  }
+},
+{
+  id: "cornea", area: "Córnea", time: "04:05", box: "Box 1",
+  title: "Ojo rojo en portador de lentillas",
+  pager: "Triaje: «ojo rojo con dolor, lleva lentillas».",
+  patient: "Hombre, 24 años. Ojo izquierdo rojo y doloroso desde ayer, fotofobia, «veo como empañado». Lentes de contacto mensuales.",
+  steps: [
+    { type: "ask", title: "Anamnesis dirigida", prompt: "Tres preguntas.", max: 3, items: [
+      { label: "¿Duerme con las lentillas?", result: "A veces, cuando sale de fiesta. Anoche, sí.", tag: "key", note: "El principal factor de riesgo de queratitis infecciosa en portadores." },
+      { label: "¿Ha usado algún colirio?", result: "Un colirio de dexametasona y tobramicina que tenía en casa, desde ayer.", tag: "key", note: "Un corticoide sin diagnóstico puede empeorar una queratitis infecciosa, sobre todo por hongos o Acanthamoeba." },
+      { label: "¿Se ducha o se baña con ellas?", result: "Se ducha con ellas y va a la piscina los sábados.", tag: "key", note: "Contacto con agua: piensa también en Acanthamoeba y pide los cultivos que corresponden." },
+      { label: "¿Se ha dado algún golpe con una rama o una planta?", result: "No.", tag: "useful", note: "Hace menos probable la queratitis fúngica." },
+      { label: "¿Tiene alergias?", result: "No.", tag: "neutral", note: "No es lo que decide ahora." },
+      { label: "¿Desde cuándo usa lentillas?", result: "Desde los 16 años.", tag: "neutral", note: "Poco útil para decidir." }
+    ]},
+    { type: "ask", title: "Exploración", prompt: "Tres exploraciones o pruebas.", max: 3, items: [
+      { label: "Biomicroscopía con fluoresceína", result: "OI: infiltrado blanco paracentral de 3 mm con defecto epitelial que tiñe. Tyndall en cámara anterior. Sin hipopión.", tag: "key", note: "Tamaño, localización y profundidad deciden si cultivas y cómo tratas." },
+      { label: "Raspado corneal para Gram y cultivo", result: "Muestras tomadas antes del primer antibiótico.", tag: "key", note: "Infiltrado > 2 mm, cerca del eje y tras un corticoide: indicación clara de cultivo." },
+      { label: "Revisar el estuche y las lentillas", result: "Estuche con restos. Trae las lentillas en el bolsillo.", tag: "useful", note: "También se pueden cultivar." },
+      { label: "Agudeza visual", result: "OI 0,3. OD 1,0.", tag: "useful", note: "Útil para seguir la evolución." },
+      { label: "Ocluir el ojo para el dolor", result: "Tapado con parche.", tag: "harm", note: "En un portador de lentillas, la oclusión favorece el crecimiento de Pseudomonas." },
+      { label: "Tonometría de aplanación", result: "No concluyente.", tag: "neutral", note: "Aporta poco ahora. Con un defecto epitelial infectado, mejor un tonómetro desechable si hace falta." }
+    ]},
+    { type: "ai", intro: "El asistente de IA (ficticio) propone:", claims: [
+      "El principal factor de riesgo es dormir con las lentillas.",
+      "Un infiltrado de más de 2 mm cerca del eje visual es indicación de raspado y cultivo.",
+      "Mantén el colirio de dexametasona y tobramicina: ya cubre bacterias y reduce la inflamación.",
+      "Hay que retirar las lentillas hasta la resolución."
+    ], wrong: 2, contradiction: "Uso previo de corticoide sin diagnóstico microbiológico.", explain: "La tobramicina en esa combinación no basta para una queratitis de 3 mm, y el corticoide sin germen identificado puede empeorarla. Los corticoides se plantean, si acaso, más tarde: con germen conocido y buena respuesta al antibiótico (ensayo SCUT)." },
+    { type: "decide", title: "Primera decisión", question: "¿Tratamiento inicial?", options: [
+      { text: "Tras tomar las muestras, antibiótico tópico intensivo de amplio espectro según el protocolo (reforzados o fluoroquinolona). Suspender el corticoide.", score: 2, fb: "Correcto. Cultivo antes, antibiótico intensivo después y fuera el corticoide." },
+      { text: "Oclusión y pomada antibiótica.", score: 0, fb: "Nunca ocluyas en un portador de lentillas con úlcera." },
+      { text: "Mantener el corticoide y añadir un antibiótico.", score: 0, fb: "El corticoide no se añade al principio y sin germen." },
+      { text: "Antifúngico empírico.", score: 0, fb: "Sin trauma vegetal ni aspecto fúngico, no es lo primero. Ajusta con el cultivo." }
+    ]},
+    { type: "decide", title: "Segunda decisión", question: "¿Y ahora?", options: [
+      { text: "Revisión en 24 horas, o ingreso si no puede cumplir la pauta horaria.", score: 2, fb: "Correcto. Las primeras 48 horas deciden." },
+      { text: "Ingreso en todos los casos.", score: 1, fb: "Es razonable si no hay garantía de cumplimiento, pero no siempre es necesario." },
+      { text: "Revisión en consultas en una semana.", score: 0, fb: "Demasiado tarde para una úlcera de 3 mm." }
+    ]},
+    { type: "isbar", prompt: "Llamas al adjunto. ¿Qué tres datos le das?", pick: 3, items: [
+      { text: "Infiltrado de 3 mm paracentral con defecto epitelial", key: true },
+      { text: "Duerme con las lentillas y se ha puesto un corticoide desde ayer", key: true },
+      { text: "Muestras tomadas y antibiótico intensivo iniciado", key: true },
+      { text: "Agudeza visual de 0,3", key: false },
+      { text: "Tiene 24 años", key: false },
+      { text: "No tiene alergias", key: false },
+      { text: "El estuche está sucio", key: false }
+    ], model: [
+      ["I", "Soy el R4 de guardia. Te llamo por un paciente de 24 años, portador de lentillas."],
+      ["S", "Queratitis infecciosa en el OI: infiltrado paracentral de 3 mm con defecto epitelial."],
+      ["B", "Durmió con las lentillas y lleva un día con dexametasona y tobramicina."],
+      ["A", "He tomado muestras y he empezado antibiótico intensivo. He suspendido el corticoide. Además, va a la piscina."],
+      ["R", "Te propongo revisión mañana y pedir también cultivo para Acanthamoeba. ¿Estás de acuerdo?"]
+    ]},
+  ],
+  debrief: {
+    knew: ["Infiltrado de 3 mm con defecto epitelial en un portador que duerme con las lentillas.", "Uso previo de corticoide."],
+    assumed: ["Que es bacteriana: es lo más probable, pero el contacto con agua obliga a pensar en Acanthamoeba."],
+    redflags: ["Lentillas y ojo rojo doloroso: queratitis hasta que se demuestre lo contrario.", "Nunca ocluyas a un portador de lentillas.", "Pregunta siempre por colirios previos, sobre todo corticoides."],
+    pearl: "Lleva el estuche y las lentillas al laboratorio: a veces el germen crece ahí y no en el raspado."
+  }
+},
+{
+  id: "retina", area: "Retina", time: "01:30", box: "Box 2",
+  title: "Pérdida brusca de visión",
+  pager: "Triaje: «no ve por un ojo desde hace dos horas, sin dolor».",
+  patient: "Mujer, 78 años. Ha perdido de golpe la visión del ojo derecho hace 2 horas, sin dolor. Hipertensa.",
+  steps: [
+    { type: "ask", title: "Anamnesis dirigida", prompt: "Tres preguntas.", max: 3, items: [
+      { label: "¿Le duele la cabeza últimamente?", result: "Desde hace tres semanas, en la sien derecha. Le duele al peinarse.", tag: "key", note: "Cefalea temporal reciente e hipersensibilidad del cuero cabelludo en una mayor de 50 años: arteritis de células gigantes." },
+      { label: "¿Le duele al masticar?", result: "Sí. Tiene que parar a mitad de la comida.", tag: "key", note: "La claudicación mandibular es el síntoma más específico de arteritis de células gigantes." },
+      { label: "¿Ha notado cansancio, pérdida de peso o dolor en los hombros?", result: "Cansancio y dolor en los hombros por las mañanas.", tag: "key", note: "Síntomas sistémicos y polimialgia reumática." },
+      { label: "¿Ha tenido episodios de visión borrosa que se pasaban solos?", result: "Hace una semana, unos minutos, en el mismo ojo.", tag: "useful", note: "Amaurosis fugax: posible tanto en la causa embólica como en la arterítica." },
+      { label: "¿Fuma?", result: "Lo dejó hace 20 años.", tag: "neutral", note: "Riesgo vascular, pero no te diferencia las dos causas." },
+      { label: "¿Usa lentillas?", result: "No.", tag: "neutral", note: "No aporta aquí." }
+    ]},
+    { type: "ask", title: "Exploración", prompt: "Tres exploraciones o pruebas.", max: 3, items: [
+      { label: "Fondo de ojo", result: "OD: retina blanquecina con mancha rojo cereza. Papila pálida, de bordes algo borrosos.", tag: "key", note: "Oclusión de la arteria central de la retina. La papila pálida y edematosa sugiere que también hay neuropatía isquémica: piensa en arteritis." },
+      { label: "VSG, PCR y plaquetas urgentes", result: "VSG 92 mm/h. PCR 48 mg/L. Plaquetas 520 000.", tag: "key", note: "Inflamación sistémica y trombocitosis apoyan la arteritis de células gigantes." },
+      { label: "Palpar las arterias temporales", result: "Temporal derecha engrosada, dolorosa y con pulso débil.", tag: "key", note: "Hallazgo muy sugestivo." },
+      { label: "Reflejos pupilares", result: "Defecto pupilar aferente relativo en el OD.", tag: "useful", note: "Confirma la afectación, no la causa." },
+      { label: "OCT macular", result: "Hiperreflectividad de las capas internas de la retina en el OD.", tag: "useful", note: "Apoya la oclusión arterial. No cambia lo urgente." },
+      { label: "Masaje ocular y paracentesis", result: "Sin cambios.", tag: "neutral", note: "Sin beneficio demostrado. Te quita tiempo para lo importante." }
+    ]},
+    { type: "ai", intro: "El asistente de IA (ficticio) resume:", claims: [
+      "La oclusión de la arteria central de la retina equivale a un ictus.",
+      "Con 78 años, cefalea temporal y claudicación mandibular hay que descartar arteritis de células gigantes.",
+      "Espera a la biopsia de la arteria temporal antes de empezar corticoides, para no alterar el resultado.",
+      "Si es arterítica, el ojo izquierdo está en riesgo."
+    ], wrong: 2, contradiction: "Claudicación mandibular, VSG de 92 y arteria temporal engrosada.", explain: "Con alta sospecha, los corticoides empiezan ya. El ojo adelfo puede afectarse en días. La biopsia sigue siendo útil aunque se haga días después de empezar el tratamiento." },
+    { type: "decide", title: "Primera decisión", question: "¿Qué haces ahora?", options: [
+      { text: "Empezar ya corticoides sistémicos a dosis altas según el protocolo, sin esperar a la biopsia.", score: 2, fb: "Correcto. Proteges el ojo izquierdo." },
+      { text: "Solo activar la vía de ictus.", score: 1, fb: "Es lo indicado en la oclusión no arterítica. Aquí la sospecha de arteritis obliga además a tratar ya." },
+      { text: "Pedir la biopsia y esperar el resultado.", score: 0, fb: "Esperar pone en riesgo el otro ojo." },
+      { text: "Valorar fibrinolisis.", score: 0, fb: "No tiene sentido en una oclusión arterítica." }
+    ]},
+    { type: "decide", title: "Segunda decisión", question: "¿Cómo lo organizas?", options: [
+      { text: "Ingreso o valoración urgente con medicina interna o reumatología, biopsia o ecografía de las temporales en los días siguientes y estudio vascular.", score: 2, fb: "Correcto. Es un problema sistémico." },
+      { text: "Alta con corticoide oral y consulta en un mes.", score: 0, fb: "Necesita confirmación diagnóstica y seguimiento estrecho." },
+      { text: "Doppler carotídeo ambulatorio como único estudio.", score: 0, fb: "Busca un émbolo y deja sin estudiar la arteritis." }
+    ]},
+    { type: "isbar", prompt: "Llamas al adjunto. ¿Qué tres datos le das?", pick: 3, items: [
+      { text: "Oclusión de la arteria central de la retina en el OD de 2 horas", key: true },
+      { text: "Cefalea temporal y claudicación mandibular", key: true },
+      { text: "VSG de 92 y PCR de 48", key: true },
+      { text: "Hipertensa", key: false },
+      { text: "Agudeza visual del OI de 0,7", key: false },
+      { text: "Defecto pupilar aferente en el OD", key: false },
+      { text: "OCT con capas internas hiperreflectivas", key: false }
+    ], model: [
+      ["I", "Soy el R4 de guardia. Te llamo por una paciente de 78 años."],
+      ["S", "Oclusión de la arteria central de la retina en el OD, de 2 horas de evolución."],
+      ["B", "Tres semanas de cefalea temporal, claudicación mandibular y dolor en los hombros."],
+      ["A", "VSG de 92, PCR de 48 y temporal engrosada. Alta sospecha de arteritis de células gigantes."],
+      ["R", "Te propongo empezar ya corticoides y avisar a medicina interna. ¿Estás de acuerdo?"]
+    ]},
+  ],
+  debrief: {
+    knew: ["Oclusión de la arteria central de la retina.", "Clínica y analítica muy sugestivas de arteritis de células gigantes."],
+    assumed: ["Que es arterítica: la confirmación vendrá de la biopsia o la ecografía."],
+    redflags: ["Mayor de 50 años con pérdida brusca de visión: pregunta siempre por los síntomas de arteritis.", "Los corticoides no esperan a la biopsia.", "La oclusión arterial es un ictus: también hay que estudiarla como tal."],
+    pearl: "Tres preguntas en 20 segundos: ¿le duele la cabeza?, ¿le duele al masticar?, ¿le duelen los hombros? Pueden salvar el otro ojo."
+  }
+},
+{
+  id: "trauma", area: "Trauma", time: "23:50", box: "Box 4",
+  title: "«Algo me ha saltado al ojo»",
+  pager: "Triaje: «sensación de cuerpo extraño, poco dolor».",
+  patient: "Hombre, 41 años. Le ha saltado algo al ojo derecho mientras golpeaba un cincel con un martillo. Molestia leve. Ve algo peor.",
+  steps: [
+    { type: "ask", title: "Anamnesis dirigida", prompt: "Tres preguntas.", max: 3, items: [
+      { label: "¿Qué estaba haciendo exactamente? ¿Llevaba gafas de protección?", result: "Martillo sobre un cincel de metal. Sin gafas.", tag: "key", note: "Metal sobre metal: fragmento pequeño a alta velocidad. Alta sospecha de cuerpo extraño intraocular." },
+      { label: "¿Cuánto le duele?", result: "Poco. Un 3 sobre 10.", tag: "key", note: "La trampa: el poco dolor no descarta que el globo esté abierto." },
+      { label: "¿Está vacunado del tétanos?", result: "No lo recuerda.", tag: "useful", note: "Hay que actualizar la profilaxis." },
+      { label: "¿Cuándo comió por última vez?", result: "Cenó hace una hora.", tag: "useful", note: "Importa para la anestesia." },
+      { label: "¿Se ha frotado el ojo?", result: "Un poco.", tag: "neutral", note: "No cambia el manejo." },
+      { label: "¿Usa gafas habitualmente?", result: "Para leer.", tag: "neutral", note: "No aporta." }
+    ]},
+    { type: "ask", title: "Exploración", prompt: "Tres exploraciones o pruebas.", max: 3, items: [
+      { label: "Biomicroscopía y test de Seidel", result: "Herida corneal de 1 mm autosellada, Seidel negativo. Defecto de transiluminación en el iris. Opacidad focal del cristalino.", tag: "key", note: "Herida, iris y cristalino alineados: un trayecto de entrada." },
+      { label: "TC orbitario de cortes finos", result: "Cuerpo extraño metálico hiperdenso en el vítreo inferior.", tag: "key", note: "La prueba de elección." },
+      { label: "Fondo de ojo sin presionar", result: "Hemorragia vítrea leve. No se ve bien el cuerpo extraño.", tag: "useful", note: "Útil, pero no descarta nada." },
+      { label: "RM orbitaria", result: "Contraindicada.", tag: "harm", note: "Un fragmento metálico ferromagnético puede moverse y causar más daño." },
+      { label: "Indentación escleral", result: "No la hagas.", tag: "harm", note: "Nunca presiones un globo que puede estar abierto." },
+      { label: "Tonometría de contacto", result: "Mejor no.", tag: "harm", note: "Evítala si sospechas globo abierto." }
+    ]},
+    { type: "ai", intro: "El asistente de IA (ficticio) resume:", claims: [
+      "Con poco dolor y Seidel negativo, es improbable que el globo esté abierto.",
+      "Golpe de metal sobre metal: alta sospecha de cuerpo extraño intraocular.",
+      "La prueba de elección es el TC. La RM está contraindicada si hay metal.",
+      "Hay que proteger el ojo con un escudo rígido."
+    ], wrong: 0, contradiction: "Herida autosellada con trayecto por el iris y el cristalino.", explain: "Los fragmentos pequeños y rápidos entran con poco dolor y la herida se sella sola. Un Seidel negativo no descarta perforación." },
+    { type: "decide", title: "Primera decisión", question: "¿Qué haces?", options: [
+      { text: "Escudo rígido, dieta absoluta, profilaxis antibiótica sistémica y antitetánica, y aviso a retina para cirugía.", score: 2, fb: "Correcto." },
+      { text: "Parche compresivo y revisión mañana.", score: 0, fb: "Nunca presiones un ojo con posible globo abierto." },
+      { text: "Extraer el cuerpo extraño en la lámpara de hendidura.", score: 0, fb: "Está dentro del ojo: requiere cirugía en quirófano." },
+      { text: "Antibiótico tópico y alta, porque el Seidel es negativo.", score: 0, fb: "Es la trampa del caso." }
+    ]},
+    { type: "decide", title: "Segunda decisión", question: "¿Cuándo hay que operar?", options: [
+      { text: "Lo antes posible, idealmente en las primeras 24 horas.", score: 2, fb: "Correcto. Retrasarlo aumenta el riesgo de endoftalmitis y, si el fragmento es de hierro, de siderosis." },
+      { text: "Cuando se reabsorba la hemorragia.", score: 0, fb: "El riesgo de infección no espera." },
+      { text: "No operar si ve bien.", score: 0, fb: "Un cuerpo extraño metálico intraocular se extrae." }
+    ]},
+    { type: "isbar", prompt: "Llamas al retinólogo de guardia. ¿Qué tres datos le das?", pick: 3, items: [
+      { text: "Metal sobre metal sin protección", key: true },
+      { text: "Herida autosellada con trayecto por el iris y el cristalino", key: true },
+      { text: "Cuerpo extraño metálico en el vítreo inferior en el TC", key: true },
+      { text: "Le duele un 3 sobre 10", key: false },
+      { text: "Cenó hace una hora", key: false },
+      { text: "No recuerda la vacuna del tétanos", key: false },
+      { text: "Agudeza visual de 0,5", key: false }
+    ], model: [
+      ["I", "Soy el R4 de guardia. Te llamo por un hombre de 41 años con un traumatismo en el OD."],
+      ["S", "Cuerpo extraño metálico intraocular en el vítreo inferior, confirmado por TC."],
+      ["B", "Martillo sobre un cincel, sin gafas. Herida corneal autosellada con trayecto por el iris y el cristalino."],
+      ["A", "Tiene escudo rígido, profilaxis antibiótica y antitetánica. Cenó hace una hora."],
+      ["R", "Necesita cirugía en las próximas horas. ¿Cuándo lo programamos?"]
+    ]},
+  ],
+  debrief: {
+    knew: ["Herida autosellada con trayecto de entrada y cuerpo extraño en el TC."],
+    assumed: ["Que el fragmento es de hierro: el tipo de metal se confirmará en cirugía."],
+    redflags: ["Metal sobre metal: cuerpo extraño intraocular hasta que se demuestre lo contrario.", "Poco dolor y Seidel negativo no descartan perforación.", "Nunca RM con sospecha de metal. Nunca presionar."],
+    pearl: "Pregunta siempre qué estaba haciendo. El mecanismo vale más que el dolor."
+  }
+},
+{
+  id: "posop", area: "Posoperatorio", time: "02:15", box: "Box 5",
+  title: "Dolor al cuarto día de la catarata",
+  pager: "Triaje: «operado de cataratas hace 4 días, dolor y ve peor».",
+  patient: "Hombre, 72 años. Operado de catarata en el ojo izquierdo hace 4 días en vuestro hospital. Dolor desde ayer y «veo mucho peor».",
+  steps: [
+    { type: "ask", title: "Anamnesis dirigida", prompt: "Tres preguntas.", max: 3, items: [
+      { label: "¿Cómo veía al día siguiente de la operación?", result: "Muy bien, «como nunca».", tag: "key", note: "Buena visión inicial y empeoramiento después: lo contrario de lo esperable." },
+      { label: "¿Hubo alguna complicación en la cirugía?", result: "El informe dice: rotura de la cápsula posterior y vitrectomía anterior.", tag: "key", note: "La rotura capsular multiplica el riesgo de endoftalmitis." },
+      { label: "¿Desde cuándo le duele?", result: "Desde ayer por la tarde, cada vez más.", tag: "key", note: "Dolor progresivo a partir del tercer o cuarto día: muy sugestivo." },
+      { label: "¿Se pone las gotas?", result: "Sí, aunque a veces se olvida del antibiótico.", tag: "neutral", note: "Las gotas no explican ni evitan una endoftalmitis." },
+      { label: "¿Es alérgico a algún antibiótico?", result: "No que sepa.", tag: "useful", note: "Útil antes de inyectar." },
+      { label: "¿Tiene fiebre?", result: "No.", tag: "neutral", note: "Suele faltar en la endoftalmitis posoperatoria." }
+    ]},
+    { type: "ask", title: "Exploración", prompt: "Tres exploraciones o pruebas.", max: 3, items: [
+      { label: "Biomicroscopía", result: "Edema palpebral, quemosis, Tyndall 4+ con fibrina e hipopión de 1,5 mm. Herida estanca.", tag: "key", note: "Hipopión y fibrina con dolor al cuarto día." },
+      { label: "Agudeza visual", result: "OI: movimientos de manos.", tag: "key", note: "Según el EVS, la agudeza decide entre inyección y vitrectomía inmediata." },
+      { label: "Ecografía B", result: "Vitritis densa. Retina aplicada.", tag: "key", note: "Confirma la afectación del vítreo y descarta desprendimiento." },
+      { label: "Fondo de ojo", result: "Reflejo rojo muy pobre. No se ve el fondo.", tag: "useful", note: "Por eso necesitas la ecografía." },
+      { label: "Tonometría", result: "OI 26 mmHg.", tag: "useful", note: "A tener en cuenta, no decide." },
+      { label: "Cultivo conjuntival", result: "Recogido.", tag: "neutral", note: "Poco rendimiento: la muestra que importa es intraocular." }
+    ]},
+    { type: "ai", intro: "El asistente de IA (ficticio) resume:", claims: [
+      "Hipopión, dolor y pérdida de visión al cuarto día: endoftalmitis aguda hasta que se demuestre lo contrario.",
+      "La rotura capsular aumenta el riesgo.",
+      "Con visión de movimientos de manos, el EVS obliga a hacer una vitrectomía inmediata.",
+      "Hay que tomar muestras de humor acuoso y vítreo antes de inyectar los antibióticos."
+    ], wrong: 2, contradiction: "Agudeza visual de movimientos de manos, no de percepción de luz.", explain: "El EVS solo demostró beneficio de la vitrectomía inmediata cuando la visión era de percepción de luz. Con movimientos de manos, tomar muestras e inyectar antibióticos dio resultados equivalentes. Hoy muchos cirujanos individualizan, pero «obliga» es falso." },
+    { type: "decide", title: "Primera decisión", question: "¿Qué haces esta noche?", options: [
+      { text: "Tomar muestras de humor acuoso y vítreo e inyectar antibióticos intravítreos según el protocolo, esta misma noche.", score: 2, fb: "Correcto. Es la base del tratamiento y no espera a mañana." },
+      { text: "Vitrectomía urgente.", score: 1, fb: "Puede plantearse individualizando, pero con movimientos de manos el EVS no demostró que sea superior." },
+      { text: "Subir el corticoide tópico y revisar en 48 horas.", score: 0, fb: "Trata una inflamación estéril (como el TASS, que aparece en las primeras 12–48 horas y casi sin dolor). Esto es otra cosa." },
+      { text: "Antibióticos tópicos reforzados y control en 24 horas.", score: 0, fb: "No alcanzan concentraciones suficientes en el vítreo." }
+    ]},
+    { type: "decide", title: "Segunda decisión", question: "Después de la inyección:", options: [
+      { text: "Revisión en 12–24 horas. Si empeora, valorar vitrectomía o repetir la inyección.", score: 2, fb: "Correcto. Las primeras 24–48 horas marcan el pronóstico." },
+      { text: "Alta y revisión en una semana.", score: 0, fb: "Demasiado tiempo para una endoftalmitis." },
+      { text: "Esperar al cultivo antes de volver a explorarlo.", score: 0, fb: "La evolución clínica no espera al laboratorio." }
+    ]},
+    { type: "isbar", prompt: "Llamas al adjunto. ¿Qué tres datos le das?", pick: 3, items: [
+      { text: "Cuarto día tras una catarata con rotura capsular", key: true },
+      { text: "Hipopión de 1,5 mm y vitritis densa en la ecografía", key: true },
+      { text: "Agudeza visual de movimientos de manos", key: true },
+      { text: "PIO de 26 mmHg", key: false },
+      { text: "A veces se olvida del antibiótico", key: false },
+      { text: "No tiene fiebre", key: false },
+      { text: "Tiene 72 años", key: false }
+    ], model: [
+      ["I", "Soy el R4 de guardia. Te llamo por un paciente operado de catarata en el OI hace 4 días."],
+      ["S", "Sospecha de endoftalmitis aguda: hipopión de 1,5 mm y vitritis densa en la ecografía."],
+      ["B", "Hubo rotura capsular con vitrectomía anterior. Veía muy bien al día siguiente."],
+      ["A", "Ahora ve movimientos de manos. Retina aplicada."],
+      ["R", "Te propongo tomar muestras e inyectar antibióticos intravítreos ahora. ¿Vienes o lo hago yo?"]
+    ]},
+  ],
+  debrief: {
+    knew: ["Hipopión, vitritis y pérdida de visión al cuarto día tras una cirugía complicada."],
+    assumed: ["Que es bacteriana: el cultivo lo confirmará (y puede salir negativo)."],
+    redflags: ["Dolor y peor visión tras una catarata: endoftalmitis hasta que se demuestre lo contrario.", "Las muestras van antes de los antibióticos, pero no los retrasan.", "La agudeza visual (percepción de luz o más) orienta la decisión."],
+    pearl: "Pregunta cómo veía el primer día. Si veía bien y ahora ve peor, preocúpate."
+  }
+},
+{
+  id: "superficie", area: "Superficie ocular", time: "03:30", box: "Pasillo",
+  title: "Salpicadura química",
+  pager: "Llega corriendo desde triaje: «le ha saltado desatascador a los ojos hace 10 minutos».",
+  patient: "Mujer, 35 años. Le ha salpicado un desatascador en ambos ojos mientras limpiaba. Dolor intenso. No puede abrir los ojos.",
+  steps: [
+    { type: "decide", title: "Antes de nada", question: "¿Qué haces primero?", options: [
+      { text: "Irrigar ya, con abundante suero (o lo que haya), anestésico tópico y separando los párpados. Explorar después.", score: 2, fb: "Correcto. Es la excepción: aquí se trata antes de explorar." },
+      { text: "Medir la agudeza visual, que es el signo vital del ojo.", score: 0, fb: "En la causticación, la agudeza visual se mide después de irrigar." },
+      { text: "Neutralizar con un ácido débil.", score: 0, fb: "Nunca: la reacción produce calor y añade daño." },
+      { text: "Buscar en internet el producto exacto.", score: 0, fb: "Útil después. Cada minuto sin irrigar cuenta." }
+    ]},
+    { type: "ask", title: "Mientras irrigas", prompt: "Tres preguntas.", max: 3, items: [
+      { label: "¿Qué producto era exactamente?", result: "Desatascador de tuberías: hidróxido sódico.", tag: "key", note: "Un álcali fuerte: penetra rápido y es más grave que un ácido." },
+      { label: "¿Lleva lentillas?", result: "Sí, en el ojo derecho.", tag: "key", note: "Hay que retirarla: retiene el producto." },
+      { label: "¿Se lavó en casa?", result: "Unos segundos bajo el grifo.", tag: "useful", note: "Tiempo de contacto largo: espera más daño." },
+      { label: "¿Tiene antecedentes oculares?", result: "No.", tag: "neutral", note: "No cambia lo urgente." },
+      { label: "¿Tiene alergias?", result: "No.", tag: "neutral", note: "No cambia lo urgente." }
+    ]},
+    { type: "ask", title: "Exploración", prompt: "Tres exploraciones.", max: 3, items: [
+      { label: "pH en el fondo de saco (5–10 min después de parar)", result: "OD pH 9. OI pH 7,5.", tag: "key", note: "El OD aún no está neutro: hay que seguir irrigando." },
+      { label: "Evertir los párpados y barrer los fondos de saco", result: "Restos de partículas en el fondo de saco superior del OD.", tag: "key", note: "Las partículas siguen liberando álcali." },
+      { label: "Biomicroscopía con fluoresceína", result: "OD: desepitelización corneal amplia e isquemia limbar en unas 4 horas de reloj. OI: queratitis punteada.", tag: "key", note: "La extensión de la isquemia limbar marca el pronóstico." },
+      { label: "Agudeza visual (tras irrigar)", result: "OD 0,2. OI 0,9.", tag: "useful", note: "Ahora sí." },
+      { label: "Tonometría", result: "OD 24 mmHg.", tag: "useful", note: "Puede subir en las causticaciones." },
+      { label: "Ocluir los dos ojos", result: "Tapados.", tag: "harm", note: "Todavía no has terminado de irrigar." }
+    ]},
+    { type: "ai", intro: "El asistente de IA (ficticio) resume:", claims: [
+      "Los álcalis penetran más que los ácidos y suelen ser más graves.",
+      "Con pH 9 en el OD, la irrigación ya ha sido suficiente: se han cumplido los 30 minutos.",
+      "La extensión de la isquemia limbar es un factor pronóstico clave.",
+      "Hay que retirar la lentilla y barrer los fondos de saco."
+    ], wrong: 1, contradiction: "pH de 9 en el ojo derecho.", explain: "Se irriga hasta que el pH se normaliza (en torno a 7–7,5), no durante un tiempo fijo. Con pH 9, sigue." },
+    { type: "decide", title: "Segunda decisión", question: "Con el pH ya neutro en ambos ojos:", options: [
+      { text: "Clasificar la gravedad (Roper-Hall o Dua), tratamiento médico intensivo según el protocolo, control estrecho y valorar la membrana amniótica.", score: 2, fb: "Correcto. Con isquemia limbar, el seguimiento es diario al principio." },
+      { text: "Lubricantes y revisión en una semana.", score: 0, fb: "Infravalora un álcali con isquemia limbar." },
+      { text: "Alta si ve bien tras irrigar.", score: 0, fb: "La agudeza visual inicial no refleja el daño limbar." }
+    ]},
+    { type: "isbar", prompt: "Llamas al adjunto. ¿Qué tres datos le das?", pick: 3, items: [
+      { text: "Álcali fuerte (sosa cáustica) en ambos ojos", key: true },
+      { text: "Isquemia limbar en unas 4 horas de reloj en el OD", key: true },
+      { text: "Irrigada hasta pH neutro y fondos de saco limpios", key: true },
+      { text: "Agudeza visual del OI de 0,9", key: false },
+      { text: "No tiene alergias", key: false },
+      { text: "PIO de 24 en el OD", key: false },
+      { text: "Se lavó unos segundos en casa", key: false }
+    ], model: [
+      ["I", "Soy el R4 de guardia. Te llamo por una mujer de 35 años con una causticación bilateral."],
+      ["S", "Álcali fuerte (desatascador de sosa cáustica), afectación grave del OD."],
+      ["B", "Contacto prolongado. Llevaba lentilla en el OD."],
+      ["A", "Irrigada hasta pH neutro y fondos de saco limpios. Isquemia limbar en unas 4 horas de reloj en el OD."],
+      ["R", "He empezado tratamiento intensivo. ¿La valoras mañana para membrana amniótica?"]
+    ]},
+  ],
+  debrief: {
+    knew: ["Álcali fuerte, contacto prolongado e isquemia limbar en el OD."],
+    assumed: ["El grado definitivo: puede cambiar en las primeras 24–48 horas."],
+    redflags: ["En la causticación, irriga antes de explorar.", "Irriga hasta pH neutro, no durante un tiempo fijo.", "Evierte los párpados: las partículas siguen quemando."],
+    pearl: "Ten tiras de pH en el box de urgencias. Son la única forma de saber cuándo parar."
+  }
+}
+];
+
+window.SOURCES = [
+  "Endophthalmitis Vitrectomy Study Group. Arch Ophthalmol 1995;113:1479-96.",
+  "Srinivasan M, et al. Steroids for Corneal Ulcers Trial (SCUT). Arch Ophthalmol 2012;130:143-50.",
+  "Hellmich B, et al. Recomendaciones EULAR 2018 sobre vasculitis de grandes vasos. Ann Rheum Dis 2020;79:19-30.",
+  "Mac Grory B, et al. Management of central retinal artery occlusion. AHA Scientific Statement. Stroke 2021;52:e282-e294.",
+  "Azuara-Blanco A, et al. Ensayo EAGLE. Lancet 2016;388:1389-97.",
+  "Dua HS, et al. Clasificación de las quemaduras químicas oculares. Br J Ophthalmol 2001;85:1379-83."
+];
+
+</script>
+<script>
+(function(){
+"use strict";
+var CASES = window.CASES, SOURCES = window.SOURCES;
+var app = document.getElementById("app");
+var S = { view:"home", mode:"single", ci:0, si:-1, ui:{}, results:{}, demo:false };
+
+var PROMPT = [
+"Actúa como oftalmólogo docente y como desarrollador web.",
+"Quiero una herramienta para que los residentes practiquen [TEMA: p. ej., urgencias de oculoplástica / interpretación de campos visuales / consentimiento informado].",
+"",
+"Reglas que no se negocian:",
+"- Casos 100 % ficticios. Nada de datos reales.",
+"- Sin dosis. Remite siempre al protocolo del centro.",
+"- Sin IA conectada: respuestas predefinidas, revisables por un adjunto.",
+"- No guarda ni envía nada. Un único archivo HTML que funcione en el móvil.",
+"",
+"Estructura de cada caso:",
+"1. Aviso inicial breve (quién llama, motivo, datos del paciente).",
+"2. Elegir qué preguntar y qué explorar, con un límite (p. ej., 3 de 6). Cada opción revela su resultado y se etiqueta como clave, útil, no aporta o perjudicial, con una frase de por qué.",
+"3. Un «asistente de IA» ficticio que resume el caso con 4 afirmaciones; una es falsa a propósito y el residente debe encontrarla y decir qué dato la contradice.",
+"4. Dos decisiones con nivel de confianza del 1 al 5 y retroalimentación razonada en cada opción.",
+"5. Llamada al adjunto: elegir los 3 datos imprescindibles y ver un modelo ISBAR.",
+"6. Debriefing: qué sabías, qué suponías, qué no te puedes perder y una perla.",
+"",
+"Antes de escribir código: hazme las preguntas que necesites y propónme los casos en una tabla para que los revise. Marca cada afirmación clínica con su fuente. Después, construye la página y dime cómo publicarla gratis con un enlace y un QR."
+].join("\n");
+
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];});}
+function $(sel,root){return (root||document).querySelector(sel);}
+function toast(t){var el=document.getElementById("toast");el.textContent=t;el.classList.add("on");setTimeout(function(){el.classList.remove("on");},1600);}
+function scrollTop(){window.scrollTo({top:0,behavior:"smooth"});}
+
+/* ---------- HOME ---------- */
+function renderHome(){
+  S.view="home";
+  var cards = CASES.map(function(c,i){
+    var r=S.results[c.id];
+    return '<button class="casecard" data-case="'+i+'"><span class="t">'+c.time+'</span><span class="a">'+esc(c.area)+'</span>'+
+      (r?'<span class="done">'+r.pts+'/'+r.max+'</span>':'')+
+      '<h3>'+esc(c.title)+'</h3><div class="small">'+esc(c.box)+'</div></button>';
+  }).join("");
+  app.innerHTML =
+  '<section class="hero">'+
+    '<div class="kicker">PROA4 · Madrid 2026 · Prototipo docente</div>'+
+    '<h1>Seis llamadas.<br>Información incompleta.<br><em>Una IA que se equivoca a propósito.</em></h1>'+
+    '<p class="lead">Elige qué preguntar, pilla el error de la IA, decide y llama al adjunto en 30 segundos. Cada caso dura unos dos minutos.</p>'+
+    '<div class="ctas"><button class="btn primary" data-act="full">Empezar la guardia →</button><button class="btn ghost" data-act="demo">▶ Ver demo (40 s)</button></div>'+
+    '<div class="small">Casos ficticios · Sin IA conectada · No guarda ni envía nada</div>'+
+  '</section>'+
+  '<h2>O elige una llamada</h2><div class="grid">'+cards+'</div>'+
+  '<h2>Qué practicas</h2><div class="skills">'+
+    '<div class="skill"><b>Preguntar con criterio</b><span>Solo tres preguntas y tres exploraciones. ¿Cuáles cambian tu decisión?</span></div>'+
+    '<div class="skill"><b>Desconfiar de la IA</b><span>Una de sus cuatro afirmaciones es falsa. Encuentra el dato que la contradice.</span></div>'+
+    '<div class="skill"><b>Calibrar tu seguridad</b><span>Cada decisión lleva un nivel de confianza. Al final ves si acertabas cuando estabas seguro.</span></div>'+
+    '<div class="skill"><b>Llamar al adjunto</b><span>Tres datos, estructura ISBAR, 30 segundos.</span></div>'+
+  '</div>'+
+  '<h2>Reglas del juego</h2><div class="rules"><ul>'+
+    '<li>Casos 100 % ficticios. No uses esta herramienta con pacientes reales.</li>'+
+    '<li>Sin dosis. No sustituye los protocolos de tu centro.</li>'+
+    '<li>El «asistente de IA» es simulado: respuestas escritas de antemano.</li>'+
+    '<li>No pide, guarda ni envía datos. Todo ocurre en tu móvil.</li>'+
+    '<li>La puntuación es para aprender, no certifica nada.</li>'+
+  '</ul></div>'+
+  '<h2>Haz la tuya</h2><p class="lead" style="font-size:.98rem">Copia este prompt en Claude, ChatGPT o Gemini, cambia el tema y revisa lo que te proponga antes de usarlo.</p>'+
+  '<div class="prompt" id="promptBox">'+esc(PROMPT)+'</div>'+
+  '<div class="actions"><button class="btn primary" data-act="copy">Copiar el prompt</button></div>'+
+  '<h2>Cómo se hizo</h2><ol class="steps-made">'+
+    '<li><b>La idea.</b> Un compañero hizo «Guardia 04» con ChatGPT. Le pedí a Claude la misma idea, a su manera.</li>'+
+    '<li><b>Las preguntas.</b> Antes de escribir, se decidió qué practicar: qué preguntar, desconfiar de la IA, calibrar la seguridad y llamar al adjunto.</li>'+
+    '<li><b>Los casos.</b> Seis urgencias clásicas, cada una con una trampa real (poco dolor en un globo abierto, el pH que no se neutraliza…).</li>'+
+    '<li><b>La revisión.</b> Fuentes citadas abajo. La revisión clínica independiente es el siguiente paso, y es trabajo de oftalmólogos.</li>'+
+    '<li><b>La publicación.</b> Un único archivo HTML en GitHub Pages, gratis, con QR. Una noche de trabajo.</li>'+
+  '</ol>'+
+  '<h2>Fuentes y revisión</h2>'+
+  '<p><span class="status">Revisión clínica independiente: pendiente</span></p>'+
+  '<ul class="small">'+SOURCES.map(function(s){return '<li>'+esc(s)+'</li>';}).join("")+'</ul>'+
+  '<footer>Noche de guardia · Prototipo docente hecho con Claude · Noviembre de 2026 · Carlos Méndez Mangana</footer>';
+}
+
+/* ---------- CASE ---------- */
+function startCase(i, mode){
+  S.view="case"; S.ci=i; S.si=-1; S.ui={}; if(mode) S.mode=mode;
+  var c=CASES[i];
+  S.results[c.id]={pts:0,max:0,conf:[],log:[]};
+  renderCase(); scrollTop();
+}
+function cur(){return CASES[S.ci];}
+function res(){return S.results[cur().id];}
+
+function renderCase(){
+  var c=cur(), total=c.steps.length+2, pos=S.si+1;
+  var prog=""; for(var k=0;k<total;k++){prog+='<i class="'+(k<pos?"on":(k===pos?"cur":""))+'"></i>';}
+  var head='<div class="casebar"><span class="chip clock">'+c.time+'</span><span class="chip">'+esc(c.box)+'</span><span class="chip">'+esc(c.area)+'</span>'+
+    (S.mode==="full"?'<span class="chip">Llamada '+(S.ci+1)+' de '+CASES.length+'</span>':'')+'</div><div class="prog">'+prog+'</div>';
+  var body;
+  if(S.si===-1) body=renderIntro(c);
+  else if(S.si>=c.steps.length) body=renderDebrief(c);
+  else { var st=c.steps[S.si]; body=R[st.type](st); }
+  app.innerHTML=head+body;
+}
+function next(){ S.si++; S.ui={}; renderCase(); scrollTop(); }
+
+function renderIntro(c){
+  return '<div class="card pager"><div class="bip">BIP · BIP · '+c.time+'</div>'+
+    '<div class="msg">'+esc(c.pager)+'</div><div class="patient">'+esc(c.patient)+'</div>'+
+    '<div class="actions"><button class="btn primary" data-act="next">Atender →</button></div></div>';
+}
+
+var TAGNAME={key:"Clave",useful:"Útil",neutral:"No aporta ahora",harm:"Perjudicial"};
+var R={};
+R.ask=function(st){
+  var u=S.ui; u.sel=u.sel||[];
+  var items=st.items.map(function(it,i){
+    var sel=u.sel.indexOf(i)>-1;
+    if(!u.done){
+      return '<button class="opt'+(sel?" sel":"")+'" data-item="'+i+'"><span class="box">'+(sel?"✓":"")+'</span><span class="body">'+esc(it.label)+'</span></button>';
+    }
+    if(!sel) return "";
+    var cls=it.tag==="key"?"ok":(it.tag==="harm"?"bad":(it.tag==="useful"?"":"faded"));
+    return '<div class="opt '+cls+'" role="group"><span class="body"><span class="tag '+it.tag+'">'+TAGNAME[it.tag]+'</span>'+esc(it.label)+
+      '<div class="res">'+esc(it.result)+'</div><div class="note">'+esc(it.note)+'</div></span></div>';
+  }).join("");
+  var extra="";
+  if(u.done){
+    var missed=st.items.filter(function(it,i){return it.tag==="key"&&u.sel.indexOf(i)<0;});
+    if(missed.length){
+      extra='<div class="missed"><h4>Lo clave que no elegiste</h4>'+missed.map(function(it){
+        return '<div class="note"><b style="color:var(--ink)">'+esc(it.label)+'</b> → '+esc(it.result)+'</div>';}).join("")+'</div>';
+    } else extra='<div class="fb ok"><b>Has elegido todo lo clave.</b></div>';
+  }
+  return '<div class="card"><h3>'+esc(st.title)+'</h3><p class="q">'+esc(st.prompt)+'</p><div class="opts">'+items+'</div>'+
+    (!u.done?'<div class="counter">'+u.sel.length+' de '+st.max+'</div>':'')+extra+
+    '<div class="actions">'+(!u.done?'<button class="btn primary" data-act="reveal" '+(u.sel.length?"":"disabled")+'>Ver respuestas</button>':'<button class="btn primary" data-act="next">Continuar →</button>')+'</div></div>';
+};
+function confRow(){
+  var c=S.ui.conf||0, b="";
+  for(var n=1;n<=5;n++) b+='<button data-conf="'+n+'" class="'+(c===n?"sel":"")+'" aria-label="Confianza '+n+'">'+n+'</button>';
+  return '<div class="conf-row"><div class="lbl">¿Cuánta seguridad tienes?</div><div class="confs">'+b+'</div><div class="confs-legend"><span>Lo dudo</span><span>Seguro</span></div></div>';
+}
+R.ai=function(st){
+  var u=S.ui;
+  var claims=st.claims.map(function(t,i){
+    var cls="opt radio";
+    if(u.done){ cls+= i===st.wrong?" bad":(i===u.pick?" mid":" faded"); }
+    else if(u.pick===i) cls+=" sel";
+    return '<button class="'+cls+'" data-claim="'+i+'" '+(u.done?"disabled":"")+'><span class="box">'+(u.pick===i&&!u.done?"●":"")+'</span><span class="body">'+esc(t)+
+      (u.done&&i===st.wrong?'<div class="note" style="color:var(--bad)">Esta es la afirmación falsa.</div>':'')+'</span></button>';
+  }).join("");
+  var fb="";
+  if(u.done){
+    var ok=u.pick===st.wrong;
+    fb='<div class="fb '+(ok?"ok":"bad")+'"><b>'+(ok?"¡La has pillado!":"Se te ha colado.")+'</b>'+
+      '<div><b style="display:inline">Dato que la contradice:</b> '+esc(st.contradiction)+'</div><div class="note" style="color:var(--ink)">'+esc(st.explain)+'</div></div>';
+  }
+  return '<div class="card ai"><div class="who"><span class="bot">✦</span>Asistente de IA (simulado)<span class="conf">confianza: «alta»</span></div>'+
+    '<p class="q" style="margin-top:8px">'+esc(st.intro)+'</p><div class="task">Una afirmación es falsa. ¿Cuál?</div><div class="opts">'+claims+'</div>'+
+    (!u.done?confRow():"")+fb+
+    '<div class="actions">'+(!u.done?'<button class="btn primary" data-act="check" '+(u.pick!=null&&u.conf?"":"disabled")+'>Comprobar</button>':'<button class="btn primary" data-act="next">Continuar →</button>')+'</div></div>';
+};
+R.decide=function(st){
+  var u=S.ui;
+  var opts=st.options.map(function(o,i){
+    var cls="opt radio";
+    if(u.done){ cls+= o.score===2?" ok":(o.score===1?" mid":(i===u.pick?" bad":" faded")); }
+    else if(u.pick===i) cls+=" sel";
+    return '<button class="'+cls+'" data-opt="'+i+'" '+(u.done?"disabled":"")+'><span class="box">'+(u.pick===i?"●":"")+'</span><span class="body">'+esc(o.text)+
+      (u.done&&(i===u.pick||o.score>0)?'<div class="note">'+esc(o.fb)+'</div>':'')+'</span></button>';
+  }).join("");
+  var fb="";
+  if(u.done){
+    var o=st.options[u.pick];
+    fb='<div class="fb '+(o.score===2?"ok":(o.score===1?"mid":"bad"))+'"><b>'+(o.score===2?"Bien decidido.":(o.score===1?"Razonable, pero hay una opción mejor.":"No es la mejor opción."))+'</b>'+esc(o.fb)+'</div>';
+  }
+  return '<div class="card"><h3>'+esc(st.title)+'</h3><p class="q">'+esc(st.question)+'</p><div class="opts">'+opts+'</div>'+
+    (!u.done?confRow():"")+fb+
+    '<div class="actions">'+(!u.done?'<button class="btn primary" data-act="confirm" '+(u.pick!=null&&u.conf?"":"disabled")+'>Confirmar</button>':'<button class="btn primary" data-act="next">Continuar →</button>')+'</div></div>';
+};
+R.isbar=function(st){
+  var u=S.ui; u.sel=u.sel||[];
+  var items=st.items.map(function(it,i){
+    var sel=u.sel.indexOf(i)>-1, cls="opt";
+    if(u.done){ cls+= it.key?" ok":(sel?" bad":" faded"); }
+    else if(sel) cls+=" sel";
+    return '<button class="'+cls+'" data-isb="'+i+'" '+(u.done?"disabled":"")+'><span class="box">'+(sel?"✓":"")+'</span><span class="body">'+esc(it.text)+'</span></button>';
+  }).join("");
+  var fb="";
+  if(u.done){
+    var hits=u.sel.filter(function(i){return st.items[i].key;}).length;
+    fb='<div class="fb '+(hits===3?"ok":(hits===2?"mid":"bad"))+'"><b>'+hits+' de 3 datos imprescindibles.</b>Así podría sonar la llamada:</div>'+
+      '<div class="isbar">'+st.model.map(function(m){return '<div><span class="L">'+m[0]+'</span><span>'+esc(m[1])+'</span></div>';}).join("")+'</div>';
+  }
+  return '<div class="card"><h3>📞 Llamada al adjunto</h3><p class="q">'+esc(st.prompt)+'</p><div class="opts">'+items+'</div>'+
+    (!u.done?'<div class="counter">'+u.sel.length+' de '+st.pick+'</div>':'')+fb+
+    '<div class="actions">'+(!u.done?'<button class="btn primary" data-act="call" '+(u.sel.length===st.pick?"":"disabled")+'>Llamar</button>':'<button class="btn primary" data-act="next">Ver el debriefing →</button>')+'</div></div>';
+};
+
+function calibText(conf){
+  var hi=conf.filter(function(x){return x.c>=4;}), lo=conf.filter(function(x){return x.c<=2;});
+  var t=[];
+  if(hi.length){var h=hi.filter(function(x){return x.ok;}).length; t.push('Cuando estabas seguro (4–5) acertaste <b>'+h+' de '+hi.length+'</b>.');}
+  if(lo.length){var l=lo.filter(function(x){return x.ok;}).length; t.push('Cuando dudabas (1–2) acertaste <b>'+l+' de '+lo.length+'</b>.');}
+  if(!t.length) t.push('Tus respuestas estuvieron en seguridad media (3).');
+  var wrongSure=hi.filter(function(x){return !x.ok;}).length;
+  if(wrongSure) t.push('Ojo con los errores con mucha seguridad: en la guardia son los más peligrosos.');
+  else if(hi.length) t.push('Buena calibración.');
+  return t.join(" ");
+}
+function renderDebrief(c){
+  var r=res(), d=c.debrief, pct=r.max?Math.round(100*r.pts/r.max):0;
+  var li=function(a){return a.map(function(x){return '<li>'+esc(x)+'</li>';}).join("");};
+  var last=S.mode==="full"&&S.ci===CASES.length-1;
+  var nextBtn=S.mode==="full"? (last?'<button class="btn primary" data-act="summary">Ver el resumen de la guardia →</button>':'<button class="btn primary" data-act="nextcase">Siguiente llamada →</button>')
+    :'<button class="btn primary" data-act="home">Elegir otra llamada</button>';
+  return '<div class="card"><h3>Debriefing</h3><div class="score"><span class="n">'+r.pts+'</span><span class="small">de '+r.max+' puntos</span></div>'+
+    '<div class="bar"><i style="width:'+pct+'%"></i></div>'+
+    '<div class="calib">'+calibText(r.conf)+'</div></div>'+
+    '<div class="cols"><div class="col k"><h4>Lo que sabías</h4><ul>'+li(d.knew)+'</ul></div>'+
+    '<div class="col a"><h4>Lo que suponías</h4><ul>'+li(d.assumed)+'</ul></div>'+
+    '<div class="col r"><h4>Lo que no te puedes perder</h4><ul>'+li(d.redflags)+'</ul></div></div>'+
+    '<div class="pearl"><b>Perla · </b>'+esc(d.pearl)+'</div>'+
+    '<div class="actions">'+nextBtn+'<button class="btn ghost" data-act="retry">Repetir</button><button class="btn ghost" data-act="download">Descargar resumen</button></div>';
+}
+
+/* ---------- SUMMARY ---------- */
+function renderSummary(){
+  S.view="summary";
+  var pts=0,max=0,conf=[];
+  var rows=CASES.map(function(c){var r=S.results[c.id]; if(!r) return ""; pts+=r.pts;max+=r.max;conf=conf.concat(r.conf);
+    return '<div class="opt" role="group"><span class="body"><b>'+esc(c.area)+'</b> · '+esc(c.title)+'</span><span style="font-family:var(--mono);color:var(--amber)">'+r.pts+'/'+r.max+'</span></div>';}).join("");
+  var aiHits=CASES.filter(function(c){var r=S.results[c.id];return r&&r.aiOk;}).length;
+  app.innerHTML='<div class="casebar"><span class="chip clock">08:00</span><span class="chip">Fin de la guardia</span></div>'+
+    '<div class="card"><h3>Saliente de guardia</h3><div class="score"><span class="n">'+pts+'</span><span class="small">de '+max+' puntos</span></div>'+
+    '<div class="bar"><i style="width:'+(max?Math.round(100*pts/max):0)+'%"></i></div>'+
+    '<div class="calib">Has pillado a la IA <b>'+aiHits+' de '+CASES.length+'</b> veces. '+calibText(conf)+'</div></div>'+
+    '<div class="opts">'+rows+'</div>'+
+    '<div class="pearl" style="margin-top:14px"><b>La idea de fondo · </b>La IA puede resumir con mucha seguridad y equivocarse en el dato que importa. La decisión y la firma siguen siendo tuyas.</div>'+
+    '<div class="actions"><button class="btn primary" data-act="download">Descargar resumen</button><button class="btn ghost" data-act="home">Inicio</button></div>';
+  scrollTop();
+}
+
+function download(){
+  var lines=["NOCHE DE GUARDIA · Resumen ("+new Date().toLocaleString("es-ES")+")","Casos ficticios. Herramienta docente.",""];
+  CASES.forEach(function(c){var r=S.results[c.id]; if(!r) return;
+    lines.push(c.area.toUpperCase()+" · "+c.title+": "+r.pts+"/"+r.max+" puntos");
+    r.log.forEach(function(l){lines.push("  - "+l);});
+    lines.push("  No te puedes perder:"); c.debrief.redflags.forEach(function(x){lines.push("    · "+x);}); lines.push("");});
+  var blob=new Blob([lines.join("\n")],{type:"text/plain;charset=utf-8"});
+  var a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="noche-de-guardia-resumen.txt";
+  document.body.appendChild(a); a.click(); setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},500);
+}
+function copyPrompt(){
+  function ok(){toast("Prompt copiado");}
+  if(navigator.clipboard&&window.isSecureContext){navigator.clipboard.writeText(PROMPT).then(ok,fallback);} else fallback();
+  function fallback(){var ta=document.createElement("textarea");ta.value=PROMPT;ta.style.position="fixed";ta.style.opacity="0";document.body.appendChild(ta);ta.select();
+    try{document.execCommand("copy");ok();}catch(e){toast("Selecciónalo y cópialo a mano");} ta.remove();}
+}
+
+/* ---------- EVENTS ---------- */
+document.addEventListener("click",function(e){
+  if(S.demo && e.isTrusted){ stopDemo(); return; }
+  var t=e.target.closest("button"); if(!t) return;
+  var d=t.dataset, u=S.ui, c=CASES[S.ci], st=(S.view==="case"&&S.si>=0)?c.steps[S.si]:null;
+  if(d.case!=null){ startCase(+d.case,"single"); return; }
+  if(d.item!=null && st){ var i=+d.item, k=u.sel.indexOf(i); if(k>-1)u.sel.splice(k,1); else if(u.sel.length<st.max)u.sel.push(i); else {toast("Máximo "+st.max);return;} renderCase(); return; }
+  if(d.isb!=null && st){ var j=+d.isb, m=u.sel.indexOf(j); if(m>-1)u.sel.splice(m,1); else if(u.sel.length<st.pick)u.sel.push(j); else {toast("Solo "+st.pick+" datos");return;} renderCase(); return; }
+  if(d.claim!=null){ u.pick=+d.claim; renderCase(); return; }
+  if(d.opt!=null){ u.pick=+d.opt; renderCase(); return; }
+  if(d.conf!=null){ u.conf=+d.conf; renderCase(); return; }
+  var r=S.view==="case"?res():null;
+  switch(d.act){
+    case "home": stopDemo(); renderHome(); scrollTop(); break;
+    case "full": S.results={}; startCase(0,"full"); break;
+    case "demo": runDemo(); break;
+    case "copy": copyPrompt(); break;
+    case "next": next(); break;
+    case "nextcase": startCase(S.ci+1,"full"); break;
+    case "summary": renderSummary(); break;
+    case "retry": startCase(S.ci); break;
+    case "download": download(); break;
+    case "reveal":
+      u.done=true;
+      var keys=st.items.filter(function(x){return x.tag==="key";}).length, got=0;
+      u.sel.forEach(function(i){var tg=st.items[i].tag; if(tg==="key")got++; if(tg==="harm")got--;});
+      got=Math.max(0,got); r.pts+=got; r.max+=keys; r.log.push(st.title+": "+got+"/"+keys+" claves");
+      renderCase(); break;
+    case "check":
+      u.done=true; var okA=u.pick===st.wrong; r.aiOk=okA; r.pts+=okA?2:0; r.max+=2; r.conf.push({c:u.conf,ok:okA});
+      r.log.push("IA: "+(okA?"error detectado":"error no detectado")+" (seguridad "+u.conf+"/5)"); renderCase(); break;
+    case "confirm":
+      u.done=true; var sc=st.options[u.pick].score; r.pts+=sc; r.max+=2; r.conf.push({c:u.conf,ok:sc===2});
+      r.log.push(st.title+": "+sc+"/2 (seguridad "+u.conf+"/5)"); renderCase(); break;
+    case "call":
+      u.done=true; var h=u.sel.filter(function(i){return st.items[i].key;}).length; r.pts+=h; r.max+=3; r.log.push("Llamada al adjunto: "+h+"/3 datos clave"); renderCase(); break;
+  }
+});
+var projBtn=document.getElementById("projBtn");
+projBtn.addEventListener("click",function(e){e.stopPropagation(); if(S.demo) return; var on=document.documentElement.classList.toggle("proj"); projBtn.setAttribute("aria-pressed",on);});
+
+/* ---------- DEMO ---------- */
+var demoTimer=null;
+var DEMO=[ ["next"],
+  ["item",0],["item",1],["item",2],["reveal"],["next"],
+  ["item",0],["item",1],["item",2],["reveal"],["next"],
+  ["claim",2],["conf",4],["check"],["next"],
+  ["opt",0],["conf",4],["confirm"],["next"],
+  ["opt",0],["conf",3],["confirm"],["next"],
+  ["isb",0],["isb",1],["isb",2],["call"],["next"] ];
+var SEL={next:'[data-act="next"]',reveal:'[data-act="reveal"]',check:'[data-act="check"]',confirm:'[data-act="confirm"]',call:'[data-act="call"]',
+  item:function(n){return '[data-item="'+n+'"]';},claim:function(n){return '[data-claim="'+n+'"]';},conf:function(n){return '[data-conf="'+n+'"]';},
+  opt:function(n){return '[data-opt="'+n+'"]';},isb:function(n){return '[data-isb="'+n+'"]';}};
+var WAIT={reveal:2600,check:3200,confirm:2600,call:3400,next:700};
+function runDemo(){
+  S.demo=true; document.getElementById("demoBanner").classList.add("on");
+  startCase(0,"single"); var k=0;
+  (function step(){
+    if(!S.demo) return;
+    if(k>=DEMO.length){ demoTimer=setTimeout(stopDemo,4000); return; }
+    var a=DEMO[k++], sel=typeof SEL[a[0]]==="function"?SEL[a[0]](a[1]):SEL[a[0]], el=$(sel);
+    if(el){ el.scrollIntoView({behavior:"smooth",block:"center"}); el.classList.add("flash");
+      demoTimer=setTimeout(function(){ if(!S.demo) return; el.click(); demoTimer=setTimeout(step, WAIT[a[0]]||650); }, 450);
+    } else demoTimer=setTimeout(step,300);
+  })();
+}
+function stopDemo(){ if(!S.demo) return; S.demo=false; clearTimeout(demoTimer); document.getElementById("demoBanner").classList.remove("on"); toast("Demo detenida"); }
+
+/* deep link: #caso=retina */
+var m=location.hash.match(/caso=([a-z]+)/);
+if(m){ var idx=CASES.map(function(c){return c.id;}).indexOf(m[1]); if(idx>-1){ startCase(idx,"single"); } else renderHome(); }
+else renderHome();
+})();
+</script>
+</body>
+</html>

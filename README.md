@@ -8,6 +8,9 @@ Página: https://drmmcoc.github.io/patient-journey/
 
 ## Noche de guardia
 
-Simulador docente de urgencias oftalmológicas para residentes: seis guardias ficticias, una IA simulada que se equivoca a propósito, llamada ISBAR al adjunto y debriefing. Sin IA conectada, sin dosis y sin guardar datos. Revisión clínica independiente pendiente.
+Simulador docente de urgencias oftalmológicas para residentes: siete guardias ficticias (incluido un rechazo de injerto corneal), una IA simulada que se equivoca a propósito, llamada ISBAR al adjunto y debriefing. Sin IA conectada, sin dosis y sin guardar datos. Revisión clínica independiente pendiente.
 
 Página: https://drmmcoc.github.io/patient-journey/guardia/
+
+
+Logo: Centro de Ojos de La Coruña (`assets/logo-centro-ojos-coruna.png`).

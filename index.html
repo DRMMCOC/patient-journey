@@ -117,6 +117,10 @@ button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 .rules li.on-watch code,.rules li.on-watch .out{color:var(--watch);font-weight:600}
 .rules .note{font-size:12.5px;color:var(--muted);margin:8px 0 0}
 footer{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padding-top:12px;display:flex;flex-wrap:wrap;gap:6px 20px;justify-content:space-between}
+.org{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.org img{height:44px;width:auto;background:#fff;border:1px solid var(--line);border-radius:10px;padding:6px 10px;display:block}
+.org span{font-size:13px;color:var(--muted)}
+@media (max-width:640px){.org{padding-top:12px}.org img{height:34px}}
 .hint{margin:8px 0 0;font-size:13.5px;color:var(--accent);font-weight:500}
 .jump{display:none}
 @media (max-width:640px){
@@ -141,6 +145,7 @@ footer{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padd
 </head>
 <body>
 <div class="wrap">
+  <div class="org"><img src="assets/logo-centro-ojos-coruna.png" alt="Centro de Ojos de La Coruña" width="640" height="149"><span>Carlos Méndez Mangana · PROA4, Madrid 2026</span></div>
   <header>
     <div>
       <h1>Patient Journey AI</h1>

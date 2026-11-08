@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Noche de guardia · Simulador docente de urgencias oftalmológicas</title>
-<meta name="description" content="Seis guardias ficticias de oftalmología. Información incompleta y una IA que se equivoca a propósito. Prototipo docente para residentes.">
+<meta name="description" content="Siete guardias ficticias de oftalmología. Información incompleta y una IA que se equivoca a propósito. Prototipo docente para residentes.">
 <meta name="theme-color" content="#0b1020">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230b1020'/%3E%3Cellipse cx='32' cy='32' rx='22' ry='13' fill='none' stroke='%23f5b942' stroke-width='5'/%3E%3Ccircle cx='32' cy='32' r='7' fill='%23f5b942'/%3E%3C/svg%3E">
 <style>
@@ -32,6 +32,9 @@ header.top .wrap{display:flex;align-items:center;gap:10px;height:56px}
 .brand{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:.08em;font-size:.82rem;text-transform:uppercase;background:none;border:0;padding:0}
 .dot{width:9px;height:9px;border-radius:50%;background:var(--amber);box-shadow:0 0 0 0 rgba(245,185,66,.6);animation:pulse 2s infinite}
 @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(245,185,66,.55)}70%{box-shadow:0 0 0 10px rgba(245,185,66,0)}100%{box-shadow:0 0 0 0 rgba(245,185,66,0)}}
+.orglogo{height:30px;width:auto;background:#fff;border-radius:7px;padding:3px 7px;display:block}
+.hero-logo{height:46px;width:auto;background:#fff;border-radius:10px;padding:6px 10px;display:block;margin:0 0 18px}
+@media (max-width:560px){header.top .orglogo{display:none}}
 .spacer{flex:1}
 .iconbtn{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:6px 10px;font-size:.8rem;color:var(--mute)}
 .iconbtn[aria-pressed=true]{color:var(--amber-ink);background:var(--amber);border-color:var(--amber)}
@@ -160,6 +163,7 @@ footer{margin:40px 0 30px;color:var(--dim);font-size:.8rem}
   <div class="wrap">
     <button class="brand" data-act="home" aria-label="Inicio"><span class="dot"></span>Noche de guardia</button>
     <span class="spacer"></span>
+    <img class="orglogo" src="../assets/logo-centro-ojos-coruna.png" alt="Centro de Ojos de La Coruña" width="640" height="149">
     <button class="iconbtn" id="projBtn" aria-pressed="false" title="Letra grande para proyectar">A+</button>
     <button class="iconbtn" data-act="home">Inicio</button>
   </div>
@@ -295,6 +299,69 @@ window.CASES = [
     assumed: ["Que es bacteriana: es lo más probable, pero el contacto con agua obliga a pensar en Acanthamoeba."],
     redflags: ["Lentillas y ojo rojo doloroso: queratitis hasta que se demuestre lo contrario.", "Nunca ocluyas a un portador de lentillas.", "Pregunta siempre por colirios previos, sobre todo corticoides."],
     pearl: "Lleva el estuche y las lentillas al laboratorio: a veces el germen crece ahí y no en el raspado."
+  }
+},
+{
+  id: "injerto", area: "Córnea · injerto", time: "00:40", box: "Box 2",
+  title: "Ojo rojo en un trasplantado de córnea",
+  pager: "Triaje: «operado de trasplante de córnea, ve borroso y tiene el ojo rojo».",
+  patient: "Hombre, 45 años. Queratoplastia penetrante en el ojo derecho hace 14 meses por queratocono. En la última revisión, injerto transparente. Desde hace 3 días: ojo rojo, molestias, fotofobia y visión borrosa.",
+  steps: [
+    { type: "ask", title: "Anamnesis dirigida", prompt: "Tres preguntas.", max: 3, items: [
+      { label: "¿Cuándo empezó y cómo ha evolucionado?", result: "Hace 3 días. Cada mañana ve un poco peor.", tag: "key", note: "Síntomas nuevos en un injerto que estaba transparente: sospecha de complicación del injerto y valoración urgente." },
+      { label: "¿Sigue poniéndose las gotas que le pautaron?", result: "Dejó el corticoide hace un mes, por su cuenta, «porque estaba bien».", tag: "key", note: "Suspender o bajar el corticoide es uno de los desencadenantes más frecuentes de un episodio de rechazo." },
+      { label: "¿Ha recibido alguna vacuna o ha estado enfermo?", result: "Vacuna de la gripe hace una semana.", tag: "useful", note: "Se han descrito rechazos tras vacunas o infecciones. Es un dato a registrar, no una causa demostrada." },
+      { label: "¿Se ha dado algún golpe en el ojo?", result: "No.", tag: "useful", note: "Hace menos probable una dehiscencia de la herida, que no se puede pasar por alto en una queratoplastia penetrante." },
+      { label: "¿Desde cuándo tiene queratocono?", result: "Se lo diagnosticaron a los 20 años.", tag: "neutral", note: "No cambia lo que tienes que hacer esta noche." },
+      { label: "¿Qué graduación tenía antes de la cirugía?", result: "No lo recuerda.", tag: "neutral", note: "No aporta a la decisión urgente." }
+    ]},
+    { type: "ask", title: "Exploración", prompt: "Elige tres exploraciones.", max: 3, items: [
+      { label: "Biomicroscopía", result: "OD: inyección ciliar. Edema estromal del injerto que respeta la córnea receptora. Precipitados en el endotelio del injerto formando una línea que avanza desde un sector vascularizado. Suturas íntegras.", tag: "key", note: "Edema limitado al injerto con línea endotelial (de Khodadoust): el cuadro típico del rechazo endotelial." },
+      { label: "Fluoresceína y prueba de Seidel", result: "Sin defecto epitelial ni infiltrado. Seidel negativo.", tag: "key", note: "Hace improbables la queratitis infecciosa y la dehiscencia, que pueden compartir signos." },
+      { label: "Tonometría", result: "PIO de 14 mmHg.", tag: "useful", note: "Descarta una PIO alta como causa del edema y sirve de referencia, porque el tratamiento puede subirla." },
+      { label: "Agudeza visual", result: "OD 0,2 (0,6 en la última revisión).", tag: "useful", note: "Documenta la pérdida y permite seguir la respuesta." },
+      { label: "Paquimetría del injerto", result: "690 µm (540 µm hace 3 meses).", tag: "useful", note: "Objetiva el edema y su evolución." },
+      { label: "Retirar las suturas que estén flojas", result: "Retiras dos puntos.", tag: "harm", note: "Manipular un injerto inflamado puede empeorar el rechazo. Las suturas se valoran cuando el episodio esté controlado, salvo que estén expuestas o infectadas." }
+    ]},
+    { type: "ai", intro: "El asistente de IA del hospital (ficticio) resume el caso:", claims: [
+      "Cuadro compatible con un episodio de rechazo endotelial del injerto.",
+      "La suspensión del corticoide puede haber actuado como desencadenante.",
+      "El injerto ha fracasado: conviene incluir al paciente en lista para una nueva queratoplastia.",
+      "Hay que descartar infección, dehiscencia y PIO alta, que pueden compartir signos."
+    ], wrong: 2, contradiction: "Tres días de evolución en un injerto que estaba transparente.", explain: "Rechazo y fracaso no son sinónimos. El rechazo es un mecanismo inmunológico que, tratado pronto, a menudo revierte; el fracaso es la pérdida irreversible de transparencia. Llamarlo fracaso esta noche cambia el pronóstico y retrasa el tratamiento que puede salvar el injerto." },
+    { type: "decide", title: "Primera decisión", question: "¿Qué haces?", options: [
+      { text: "Corticoide tópico intensivo según el protocolo del centro, comentado con el adjunto esta noche, y control en 24–48 horas.", score: 2, fb: "Correcto. La reversibilidad depende sobre todo de lo pronto que se trate." },
+      { text: "Reanudar la pauta de mantenimiento que tenía y revisión en un mes.", score: 1, fb: "Va en la buena dirección, pero la intensidad y el seguimiento se quedan cortos para un rechazo activo." },
+      { text: "Antibiótico tópico y revisión en una semana.", score: 0, fb: "No hay infiltrado ni defecto epitelial. Tratar una infección que no tiene deja el rechazo sin tratar." },
+      { text: "Explicarle que habrá que repetir el trasplante.", score: 0, fb: "Es prematuro y erróneo: confunde rechazo con fracaso." }
+    ]},
+    { type: "decide", title: "Segunda decisión", question: "A las 48 horas, la línea endotelial ya no avanza y el edema empieza a ceder. ¿Plan?", options: [
+      { text: "Mantener el tratamiento y bajarlo despacio según protocolo, vigilar la PIO y explicarle los signos de alarma.", score: 2, fb: "Correcto. Un descenso lento evita el rebote, y un paciente que reconoce los síntomas consulta antes la próxima vez." },
+      { text: "Suspender el corticoide porque ya ha mejorado.", score: 0, fb: "Es justo lo que desencadenó este episodio. El descenso tiene que ser gradual." },
+      { text: "Pasar ya a la dosis de mantenimiento.", score: 1, fb: "Descenso demasiado brusco con el episodio aún activo." },
+      { text: "Valorar con el adjunto tratamiento sistémico si el injerto es de alto riesgo.", score: 1, fb: "Puede tener sentido en injertos de alto riesgo o rechazos graves. No es lo primero, y lo decide el adjunto." }
+    ]},
+    { type: "isbar", prompt: "Llamas al adjunto de córnea. Tienes 30 segundos. ¿Qué tres datos le das?", pick: 3, items: [
+      { text: "Injerto transparente hasta hace 3 días; ahora edema del injerto con línea endotelial", key: true },
+      { text: "Suspendió el corticoide por su cuenta hace un mes", key: true },
+      { text: "Sin infiltrado ni defecto epitelial, Seidel negativo y PIO de 14", key: true },
+      { text: "Vacuna de la gripe hace una semana", key: false },
+      { text: "Queratocono diagnosticado a los 20 años", key: false },
+      { text: "No recuerda su graduación previa", key: false },
+      { text: "Paquimetría de 690 µm", key: false }
+    ], model: [
+      ["I", "Soy el R4 de guardia. Te llamo por un paciente de 45 años con una queratoplastia penetrante en el OD de hace 14 meses."],
+      ["S", "Sospecha de rechazo endotelial: 3 días de ojo rojo y visión borrosa, AV de 0,6 a 0,2."],
+      ["B", "Injerto transparente en la última revisión. Dejó el corticoide por su cuenta hace un mes."],
+      ["A", "Edema limitado al injerto con línea endotelial. Sin infiltrado, Seidel negativo, PIO 14."],
+      ["R", "He iniciado corticoide intensivo según protocolo. ¿Lo ves mañana en consulta o prefieres cambiar algo esta noche?"]
+    ]},
+  ],
+  debrief: {
+    knew: ["Injerto previamente transparente con edema y línea endotelial.", "Sin infiltrado, sin defecto epitelial y Seidel negativo."],
+    assumed: ["Que la retirada del corticoide fue el desencadenante. Es probable, pero no está demostrado; tampoco lo está la relación con la vacuna."],
+    redflags: ["Ojo rojo y visión borrosa en un trasplantado de córnea: complicación del injerto hasta que se demuestre lo contrario.", "No llames fracaso a un rechazo: el rechazo puede revertir.", "Si hay infiltrado o defecto epitelial, descarta infección antes de intensificar el corticoide."],
+    pearl: "Enseña a todo trasplantado los signos de alarma: ojo rojo, molestia con la luz, peor visión o dolor. Que consulte el mismo día salva injertos."
   }
 },
 {
@@ -552,7 +619,8 @@ window.SOURCES = [
   "Hellmich B, et al. Recomendaciones EULAR 2018 sobre vasculitis de grandes vasos. Ann Rheum Dis 2020;79:19-30.",
   "Mac Grory B, et al. Management of central retinal artery occlusion. AHA Scientific Statement. Stroke 2021;52:e282-e294.",
   "Azuara-Blanco A, et al. Ensayo EAGLE. Lancet 2016;388:1389-97.",
-  "Dua HS, et al. Clasificación de las quemaduras químicas oculares. Br J Ophthalmol 2001;85:1379-83."
+  "Dua HS, et al. Clasificación de las quemaduras químicas oculares. Br J Ophthalmol 2001;85:1379-83.",
+  "Panda A, et al. Corneal graft rejection. Surv Ophthalmol 2007;52:375-96."
 ];
 
 </script>
@@ -600,8 +668,9 @@ function renderHome(){
   }).join("");
   app.innerHTML =
   '<section class="hero">'+
+    '<img class="hero-logo" src="../assets/logo-centro-ojos-coruna.png" alt="Centro de Ojos de La Coruña" width="640" height="149">'+
     '<div class="kicker">PROA4 · Madrid 2026 · Prototipo docente</div>'+
-    '<h1>Seis llamadas.<br>Información incompleta.<br><em>Una IA que se equivoca a propósito.</em></h1>'+
+    '<h1>Siete llamadas.<br>Información incompleta.<br><em>Una IA que se equivoca a propósito.</em></h1>'+
     '<p class="lead">Elige qué preguntar, pilla el error de la IA, decide y llama al adjunto en 30 segundos. Cada caso dura unos dos minutos.</p>'+
     '<div class="ctas"><button class="btn primary" data-act="full">Empezar la guardia →</button><button class="btn ghost" data-act="demo">▶ Ver demo (40 s)</button></div>'+
     '<div class="small">Casos ficticios · Sin IA conectada · No guarda ni envía nada</div>'+
@@ -626,14 +695,15 @@ function renderHome(){
   '<h2>Cómo se hizo</h2><ol class="steps-made">'+
     '<li><b>La idea.</b> Un compañero hizo «Guardia 04» con ChatGPT. Le pedí a Claude la misma idea, a su manera.</li>'+
     '<li><b>Las preguntas.</b> Antes de escribir, se decidió qué practicar: qué preguntar, desconfiar de la IA, calibrar la seguridad y llamar al adjunto.</li>'+
-    '<li><b>Los casos.</b> Seis urgencias clásicas, cada una con una trampa real (poco dolor en un globo abierto, el pH que no se neutraliza…).</li>'+
+    '<li><b>Los casos.</b> Siete urgencias clásicas, cada una con una trampa real (poco dolor en un globo abierto, el pH que no se neutraliza…).</li>'+
     '<li><b>La revisión.</b> Fuentes citadas abajo. La revisión clínica independiente es el siguiente paso, y es trabajo de oftalmólogos.</li>'+
     '<li><b>La publicación.</b> Un único archivo HTML en GitHub Pages, gratis, con QR. Una noche de trabajo.</li>'+
+    '<li><b>La segunda vuelta.</b> Al revisar la sesión exportada de Guardia 04 añadí el caso del injerto, el tema de mi primer proyecto de IA: rechazo no es lo mismo que fracaso.</li>'+
   '</ol>'+
   '<h2>Fuentes y revisión</h2>'+
   '<p><span class="status">Revisión clínica independiente: pendiente</span></p>'+
   '<ul class="small">'+SOURCES.map(function(s){return '<li>'+esc(s)+'</li>';}).join("")+'</ul>'+
-  '<footer>Noche de guardia · Prototipo docente hecho con Claude · Noviembre de 2026 · Carlos Méndez Mangana</footer>';
+  '<footer>Noche de guardia · Prototipo docente hecho con Claude · Noviembre de 2026 · Carlos Méndez Mangana · Centro de Ojos de La Coruña</footer>';
 }
 
 /* ---------- CASE ---------- */

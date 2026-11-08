@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Patient Journey AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+/* Layout: dos móviles de paciente a la izquierda, panel del cirujano a la derecha; selector de día arriba. */
+:root{
+  --ink:#16213a; --muted:#5b6478; --paper:#f3f5f9; --card:#ffffff; --line:#dde2ec;
+  --accent:#2747d9; --accent-soft:#e7ebfc;
+  --ok:#17824f; --ok-soft:#e3f4ea; --watch:#a8650a; --watch-soft:#fbf0dc;
+  --alert:#c62a2a; --alert-soft:#fce7e6; --clinic:#5a4fb5; --clinic-soft:#ecebf9;
+  --bubble-app:#eef1f7; --bubble-pac:#2747d9; --bubble-pac-ink:#ffffff;
+  --display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body:"IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --mono:"IBM Plex Mono", ui-monospace, Menlo, monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ink:#e7ebf5; --muted:#9aa3b8; --paper:#0f1422; --card:#171e30; --line:#2a3350;
+    --accent:#7d93ff; --accent-soft:#1f2a52;
+    --ok:#4fc98a; --ok-soft:#14301f; --watch:#e8a54a; --watch-soft:#33260f;
+    --alert:#ff7a72; --alert-soft:#3a1716; --clinic:#a99cff; --clinic-soft:#25214a;
+    --bubble-app:#222b42; --bubble-pac:#4a63e8; --bubble-pac-ink:#ffffff;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --ink:#e7ebf5; --muted:#9aa3b8; --paper:#0f1422; --card:#171e30; --line:#2a3350;
+  --accent:#7d93ff; --accent-soft:#1f2a52;
+  --ok:#4fc98a; --ok-soft:#14301f; --watch:#e8a54a; --watch-soft:#33260f;
+  --alert:#ff7a72; --alert-soft:#3a1716; --clinic:#a99cff; --clinic-soft:#25214a;
+  --bubble-app:#222b42; --bubble-pac:#4a63e8; --bubble-pac-ink:#ffffff;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--paper);color:var(--ink);font:15px/1.5 var(--body);padding:24px 20px 40px}
+.wrap{max-width:1280px;margin:0 auto;display:grid;gap:20px}
+header{display:flex;flex-wrap:wrap;align-items:end;justify-content:space-between;gap:16px}
+h1{font:700 30px/1.1 var(--display);margin:0;letter-spacing:-.01em;text-wrap:balance}
+.sub{margin:6px 0 0;color:var(--muted);max-width:62ch}
+.controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.days{display:flex;gap:4px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:4px}
+.days button,.play{font:500 14px var(--body);border:0;background:transparent;color:var(--ink);padding:8px 12px;border-radius:7px;cursor:pointer}
+.days button[aria-pressed="true"]{background:var(--accent);color:#fff}
+.days button:hover:not([aria-pressed="true"]){background:var(--accent-soft)}
+.play{background:var(--ink);color:var(--paper);padding:10px 16px;border-radius:10px}
+.play:hover{opacity:.9}
+button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.stage{display:grid;grid-template-columns:repeat(2,minmax(280px,340px)) minmax(320px,1fr);gap:20px;align-items:start}
+@media (max-width:1100px){.stage{grid-template-columns:repeat(2,minmax(260px,1fr))}.panel{grid-column:1/-1}}
+@media (max-width:640px){.stage{grid-template-columns:1fr}}
+.phone{background:var(--card);border:1px solid var(--line);border-radius:28px;padding:14px 12px 16px;box-shadow:0 10px 30px rgba(20,30,60,.08);display:grid;gap:10px}
+.phone-top{display:flex;align-items:center;gap:10px;padding:2px 6px 10px;border-bottom:1px solid var(--line)}
+.avatar{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;font:700 15px var(--display);background:var(--accent-soft);color:var(--accent);flex:none}
+.who{min-width:0}
+.who b{display:block;font-weight:600}
+.who span{font-size:12.5px;color:var(--muted)}
+.chip{margin-left:auto;font:600 12px var(--body);padding:4px 9px;border-radius:999px;white-space:nowrap}
+.chip.ok{background:var(--ok-soft);color:var(--ok)}
+.chip.watch{background:var(--watch-soft);color:var(--watch)}
+.chip.alert{background:var(--alert-soft);color:var(--alert)}
+.chip.clinic{background:var(--clinic-soft);color:var(--clinic)}
+.chip.wait{background:var(--bubble-app);color:var(--muted)}
+.chat{display:flex;flex-direction:column;gap:8px;min-height:380px;padding:4px 4px 0}
+.msg{max-width:86%;padding:9px 12px;border-radius:16px;font-size:14px;line-height:1.42}
+.msg.app{background:var(--bubble-app);border-bottom-left-radius:5px;align-self:flex-start}
+.msg.pac{background:var(--bubble-pac);color:var(--bubble-pac-ink);border-bottom-right-radius:5px;align-self:flex-end}
+.msg.urgent{background:var(--alert-soft);color:var(--ink);border:1.5px solid var(--alert);font-weight:500}
+.msg.urgent strong{color:var(--alert)}
+.msg.remind{background:var(--accent-soft);border-left:3px solid var(--accent)}
+.msg .tag{display:block;font:500 11px var(--mono);color:var(--muted);margin-bottom:3px;letter-spacing:.02em}
+.msg.urgent .tag{color:var(--alert)}
+.callbtn{display:block;margin-top:8px;width:100%;font:600 14px var(--body);background:var(--alert);color:#fff;border:0;border-radius:10px;padding:10px;cursor:pointer}
+.hidden{display:none}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;display:grid;gap:16px}
+.panel h2{font:700 19px/1.2 var(--display);margin:0}
+.panel .kicker{font-size:12.5px;color:var(--muted);margin:2px 0 0}
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.tile{border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.tile b{display:block;font:700 26px/1 var(--display);font-variant-numeric:tabular-nums}
+.tile span{font-size:12.5px;color:var(--muted)}
+.tile.alert b{color:var(--alert)} .tile.watch b{color:var(--watch)}
+.rows{display:grid;gap:8px}
+.row{display:grid;grid-template-columns:6px 1fr;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.row .stripe{background:var(--muted)}
+.row.ok .stripe{background:var(--ok)} .row.watch .stripe{background:var(--watch)}
+.row.alert .stripe{background:var(--alert)} .row.clinic .stripe{background:var(--clinic)}
+.row.alert{border-color:var(--alert);background:var(--alert-soft)}
+.row-body{padding:10px 12px;display:grid;gap:4px}
+.row-head{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.row-head b{font-weight:600}
+.row-head .meta{font-size:12.5px;color:var(--muted)}
+.row-head .chip{margin-left:auto}
+.row p{margin:0;font-size:13.5px}
+.row .ai{font-size:13px;color:var(--muted)}
+.row .ai em{font-style:normal;font:500 11px var(--mono);color:var(--accent);margin-right:4px}
+.fired{display:flex;flex-wrap:wrap;gap:6px}
+.fired code{font:500 11.5px var(--mono);background:var(--alert);color:#fff;padding:2px 7px;border-radius:5px}
+.row .act{display:flex;gap:8px;margin-top:4px}
+.row .act button{font:600 13px var(--body);border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:8px;padding:6px 10px;cursor:pointer}
+.row .act button.primary{background:var(--alert);border-color:var(--alert);color:#fff}
+.rules h3{font:600 14px var(--body);margin:0 0 6px}
+.rules ul{list-style:none;margin:0;padding:0;display:grid;gap:4px}
+.rules li{display:grid;grid-template-columns:34px 1fr auto;gap:8px;align-items:baseline;font-size:13px;padding:5px 8px;border-radius:7px}
+.rules li code{font:500 12px var(--mono);color:var(--muted)}
+.rules li .out{font-size:12px;color:var(--muted)}
+.rules li.on{background:var(--alert-soft)}
+.rules li.on code,.rules li.on .out{color:var(--alert);font-weight:600}
+.rules li.on-watch{background:var(--watch-soft)}
+.rules li.on-watch code,.rules li.on-watch .out{color:var(--watch);font-weight:600}
+.rules .note{font-size:12.5px;color:var(--muted);margin:8px 0 0}
+footer{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padding-top:12px;display:flex;flex-wrap:wrap;gap:6px 20px;justify-content:space-between}
+.hint{margin:8px 0 0;font-size:13.5px;color:var(--accent);font-weight:500}
+.jump{display:none}
+@media (max-width:640px){
+  body{padding:0 12px 32px}
+  header{position:sticky;top:0;z-index:5;background:var(--paper);padding:14px 0 10px;border-bottom:1px solid var(--line)}
+  h1{font-size:24px}
+  .sub{font-size:14px}
+  .controls{width:100%}
+  .days{width:100%;justify-content:space-between}
+  .days button{padding:8px 6px;flex:1;font-size:13px}
+  .play{width:100%}
+  .chat{min-height:0}
+  .phone{border-radius:22px}
+  .tiles{grid-template-columns:repeat(3,1fr)}
+  .tile b{font-size:22px}
+  .jump{display:flex;gap:8px;font-size:13px}
+  .jump a{flex:1;text-align:center;padding:7px;border:1px solid var(--line);border-radius:8px;color:var(--ink);text-decoration:none;background:var(--card)}
+  .phone,.panel{scroll-margin-top:190px}
+}
+@media (prefers-reduced-motion:no-preference){.msg.in{animation:pop .28s ease-out}@keyframes pop{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Patient Journey AI</h1>
+      <p class="sub">Seguimiento del paciente operado de catarata, de la indicación al alta. La IA conversa y explica; las alarmas las decide una regla fija.</p>
+      <p class="hint">Pruébalo: elige el Día 3, pulsa «Reproducir el día» y luego «Llamar al paciente» en el panel.</p>
+    </div>
+    <div class="controls">
+      <div class="days" role="group" aria-label="Día del seguimiento" id="days"></div>
+      <button class="play" id="play" type="button">▶ Reproducir el día</button>
+      <nav class="jump" aria-label="Ir a"><a href="#maria">María</a><a href="#jose">José</a><a href="#panel">Panel</a></nav>
+    </div>
+  </header>
+
+  <main class="stage">
+    <section class="phone" id="maria" aria-label="Móvil de María">
+      <div class="phone-top">
+        <div class="avatar" aria-hidden="true">ML</div>
+        <div class="who"><b>María L., 72 años</b><span>Faco + LIO · ojo derecho · 3 nov</span></div>
+        <span class="chip" id="chip-maria"></span>
+      </div>
+      <div class="chat" id="chat-maria" aria-live="polite"></div>
+    </section>
+
+    <section class="phone" id="jose" aria-label="Móvil de José">
+      <div class="phone-top">
+        <div class="avatar" aria-hidden="true">JF</div>
+        <div class="who"><b>José F., 68 años</b><span>Faco + LIO · ojo izquierdo · 3 nov</span></div>
+        <span class="chip" id="chip-jose"></span>
+      </div>
+      <div class="chat" id="chat-jose" aria-live="polite"></div>
+    </section>
+
+    <section class="panel" id="panel" aria-label="Panel del cirujano">
+      <div>
+        <h2>Panel del equipo quirúrgico</h2>
+        <p class="kicker" id="panel-day"></p>
+      </div>
+      <div class="tiles">
+        <div class="tile"><b id="t-active">3</b><span>pacientes en seguimiento</span></div>
+        <div class="tile alert"><b id="t-alert">0</b><span>alertas urgentes</span></div>
+        <div class="tile watch"><b id="t-watch">0</b><span>pendientes de llamada</span></div>
+      </div>
+      <div class="rows" id="rows"></div>
+      <div class="rules">
+        <h3>Reglas de seguridad del servicio</h3>
+        <ul id="rules"></ul>
+        <p class="note">Reglas fijas, escritas y revisadas por el servicio. Basta una para activar el circuito: la IA no tiene que confirmar la complicación.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <span>Demo con pacientes ficticios para el curso PROA4. No es un producto sanitario ni sustituye la valoración clínica.</span>
+    <span>PROM al alta: Catquest-9SF · satisfacción 0–10</span>
+  </footer>
+</div>
+
+<script>
+const DAYS = [
+  {id:"pre", label:"Antes", long:"Semana previa a la cirugía"},
+  {id:"d1", label:"Día 1", long:"Día 1 tras la cirugía · 08:00"},
+  {id:"d3", label:"Día 3", long:"Día 3 tras la cirugía · 08:00"},
+  {id:"d7", label:"Día 7", long:"Día 7 tras la cirugía"},
+  {id:"d30", label:"Día 30", long:"Día 30 · cierre del episodio"}
+];
+
+const RULES = [
+  {id:"R1", text:"Dolor ≥ 7 sobre 10", out:"Urgente"},
+  {id:"R2", text:"Visión peor que en la respuesta anterior", out:"Urgente"},
+  {id:"R3", text:"Rojez en aumento o secreción", out:"Urgente"},
+  {id:"R4", text:"Cortina, sombra o destellos nuevos", out:"Urgente"},
+  {id:"R5", text:"Sin respuesta en 24 h", out:"Llamada de enfermería"}
+];
+
+const STATUS = {
+  ok:{label:"Evolución esperada"}, watch:{label:"Sin respuesta"},
+  alert:{label:"Alerta urgente"}, clinic:{label:"Seguimiento presencial"},
+  done:{label:"Alta"}
+};
+
+const P = {
+  maria:{
+    pre:{status:"ok", msgs:[
+      ["app","Hola, María. Tu cirugía de catarata del ojo derecho es el 3 de noviembre a las 9:30. ¿Te lo explico en un minuto?"],
+      ["pac","Sí, por favor"],
+      ["app","Quitamos tu lente natural, que se ha vuelto opaca, y ponemos una lente artificial. Son unos 15 minutos, con gotas de anestesia, y vuelves a casa el mismo día."],
+      ["remind","Desde dos días antes: 1 gota del colirio antibiótico cada 8 horas en el ojo derecho. Te avisaré en cada toma.","Recordatorio"],
+      ["app","Si después notas dolor fuerte, ves peor o el ojo está cada vez más rojo, llama al teléfono de urgencias de la clínica. Lo tienes guardado arriba."]
+    ], row:"Preparación completada. Explicación leída, 6 de 6 tomas confirmadas.", ai:"Versión corta de la explicación."},
+    d1:{status:"ok", msgs:[
+      ["app","Buenos días, María. Primer día tras la cirugía. ¿Cuánto te duele el ojo, del 0 al 10?"],
+      ["pac","2"],
+      ["app","¿Ves igual, mejor o peor que ayer al salir de la clínica?"],
+      ["pac","Mejor, aunque algo borroso"],
+      ["app","¿El ojo está más rojo que ayer?"],
+      ["pac","No"],
+      ["app","Todo dentro de lo esperado. Es normal ver algo borroso los primeros días. Próxima gota a las 14:00."]
+    ], row:"Dolor 2/10 · visión mejor · sin aumento de rojez.", ai:"Respuestas dentro de lo esperado. Ninguna regla activada."},
+    d3:{status:"ok", msgs:[
+      ["app","Buenos días, María. ¿Cuánto te duele hoy, del 0 al 10?"],
+      ["pac","1"],
+      ["app","¿Ves igual, mejor o peor que el día 1?"],
+      ["pac","Mejor. Me pica un poco"],
+      ["app","El picor leve es frecuente estos días. Evita frotarte el ojo y sigue con las gotas. Siguiente control: día 7."]
+    ], row:"Dolor 1/10 · visión mejor · picor leve.", ai:"Picor leve sin otros síntomas. Ninguna regla activada."},
+    d7:{status:"ok", msgs:[
+      ["app","María, ya llevas una semana. ¿Dolor del 0 al 10?"],
+      ["pac","0"],
+      ["app","¿Algún destello, sombra o cortina en la visión?"],
+      ["pac","No, nada"],
+      ["remind","Has puesto 21 de 21 gotas. Esta semana bajamos a 1 gota cada 12 horas.","Recordatorio"]
+    ], row:"Sin dolor · sin síntomas de alarma · adherencia 21/21.", ai:"Evolución esperada. Revisión presencial programada el día 30."},
+    d30:{status:"done", msgs:[
+      ["app","María, hoy cerramos tu seguimiento. Tres preguntas rápidas sobre tu visión."],
+      ["app","¿Te cuesta leer el periódico o un libro?"],
+      ["pac","No, ninguna dificultad"],
+      ["app","Del 0 al 10, ¿cómo valoras la experiencia?"],
+      ["pac","9. Me he sentido acompañada"],
+      ["app","Gracias, María. Si notas cualquier cambio, el teléfono de la clínica sigue siendo el mismo."]
+    ], row:"PROM completado (Catquest-9SF) · satisfacción 9/10.", ai:"Alta del seguimiento digital."}
+  },
+  jose:{
+    pre:{status:"ok", msgs:[
+      ["app","Hola, José. Tu cirugía del ojo izquierdo es el 3 de noviembre a las 10:15. ¿Prefieres la explicación corta o la detallada?"],
+      ["pac","La detallada. Soy ingeniero"],
+      ["app","Se hace una incisión de unos 2 mm, se abre la cápsula del cristalino y se fragmenta con ultrasonidos (facoemulsificación). Después se aspira y se implanta una lente intraocular plegada dentro del saco capsular."],
+      ["remind","Colirio antibiótico: 1 gota cada 8 horas en el ojo izquierdo desde dos días antes.","Recordatorio"],
+      ["app","Si después notas dolor fuerte, ves peor o el ojo está cada vez más rojo, llama al teléfono de urgencias de la clínica."]
+    ], row:"Preparación completada. Explicación detallada leída, 6 de 6 tomas confirmadas.", ai:"Eligió la versión detallada de la explicación."},
+    d1:{status:"ok", msgs:[
+      ["app","Buenos días, José. Primer día tras la cirugía. ¿Cuánto te duele el ojo, del 0 al 10?"],
+      ["pac","3, como arenilla"],
+      ["app","¿Ves igual, mejor o peor que ayer al salir?"],
+      ["pac","Mejor"],
+      ["app","¿El ojo está más rojo que ayer?"],
+      ["pac","Igual"],
+      ["app","Dentro de lo esperado. La sensación de arenilla es frecuente. Próxima gota a las 14:00."]
+    ], row:"Dolor 3/10 · visión mejor · rojez estable.", ai:"Respuestas dentro de lo esperado. Ninguna regla activada."},
+    d3:{status:"alert", fired:["R1","R2"], msgs:[
+      ["app","Buenos días, José. ¿Cuánto te duele hoy, del 0 al 10?"],
+      ["pac","8. Me duele mucho desde esta noche"],
+      ["app","¿Ves igual, mejor o peor que el día 1?"],
+      ["pac","Peor, como si tuviera niebla"],
+      ["urgent","<strong>José, esto necesita valoración hoy.</strong> Llama ahora al teléfono de urgencias de la clínica o acude a urgencias. No esperes a la próxima revisión. Ya hemos avisado a tu equipo.","Aviso urgente · regla R1 + R2"]
+    ], row:"Alerta 08:03 · dolor 8/10 desde la noche · visión peor que el día 1.", ai:"Varón de 68 años, día 3 tras faco del ojo izquierdo. Dolor intenso de inicio nocturno y visión peor que el día 1. No se ha preguntado aún por rojez ni secreción: el aviso se envía antes de terminar el cuestionario.", call:true},
+    d7:{status:"clinic", msgs:[
+      ["app","José, tu equipo médico lleva ahora tu seguimiento directamente."],
+      ["remind","Seguiremos recordándote las gotas que te hayan pautado en urgencias. Pauta actualizada por la clínica el día 3.","Recordatorio"],
+      ["app","Si notas cualquier cambio, llama al teléfono de urgencias de la clínica."]
+    ], row:"Fuera del circuito automático desde el día 3. Recordatorios activos.", ai:"El seguimiento clínico lo lleva el equipo."},
+    d30:{status:"clinic", msgs:[
+      ["app","José, los cuestionarios de cierre los haremos cuando tu oftalmólogo dé por terminado el seguimiento."]
+    ], row:"PROM pendiente hasta el alta clínica.", ai:"El cuestionario de resultados queda aplazado."}
+  }
+};
+
+/* Tercera paciente, solo en el panel: ejemplo de la regla R5 (sin respuesta). */
+const CARMEN = {
+  pre:{status:"ok", row:"Preparación completada.", ai:""},
+  d1:{status:"watch", fired:["R5"], row:"Sin respuesta al cuestionario del día 1.", ai:"Llamada de enfermería programada hoy antes de las 13:00."},
+  d3:{status:"ok", row:"Contactada por teléfono el día 1. Responde ya por la app.", ai:"Dolor 1/10 · visión mejor."},
+  d7:{status:"ok", row:"Evolución esperada.", ai:""},
+  d30:{status:"done", row:"PROM completado · satisfacción 8/10.", ai:"Alta del seguimiento digital."}
+};
+
+let day = 2, timers = [], contacted = false;
+const $ = id => document.getElementById(id);
+
+function chipHTML(el, status){
+  el.className = "chip " + (status === "done" ? "ok" : status);
+  el.textContent = STATUS[status].label;
+}
+
+function bubble(m){
+  const [kind, text, tag] = m;
+  const d = document.createElement("div");
+  d.className = "msg " + kind;
+  d.innerHTML = (tag ? `<span class="tag">${tag}</span>` : "") + text;
+  if (kind === "urgent"){
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "callbtn"; b.textContent = "Llamar a urgencias de la clínica";
+    b.addEventListener("click", () => { b.textContent = "Llamada simulada · el equipo ya está avisado"; });
+    d.appendChild(b);
+  }
+  return d;
+}
+
+function renderPanel(pending){
+  const id = DAYS[day].id;
+  $("panel-day").textContent = DAYS[day].long;
+  const list = [
+    {name:"José F.", meta:"OI · 68 a", d:P.jose[id], key:"jose"},
+    {name:"María L.", meta:"OD · 72 a", d:P.maria[id], key:"maria"},
+    {name:"Carmen R.", meta:"OD · 81 a · sin smartphone propio", d:CARMEN[id], key:"carmen"}
+  ];
+  const order = {alert:0, watch:1, clinic:2, ok:3, done:4};
+  list.sort((a,b) => order[a.d.status] - order[b.d.status]);
+  const rows = $("rows"); rows.innerHTML = "";
+  let nA = 0, nW = 0, nActive = 0; const firedAll = new Set();
+  list.forEach(p => {
+    const waiting = pending && pending[p.key];
+    const st = waiting ? "wait" : p.d.status;
+    if (!waiting){
+      if (st === "alert") nA++;
+      if (st === "watch") nW++;
+      (p.d.fired || []).forEach(r => firedAll.add(r));
+    }
+    if (p.d.status !== "done") nActive++;
+    const r = document.createElement("div");
+    r.className = "row " + (st === "done" ? "ok" : st);
+    const label = waiting ? "Respondiendo…" : STATUS[st].label;
+    const chipCls = st === "done" ? "ok" : st;
+    let html = `<div class="stripe"></div><div class="row-body">
+      <div class="row-head"><b>${p.name}</b><span class="meta">${p.meta}</span><span class="chip ${chipCls}">${label}</span></div>`;
+    if (!waiting){
+      html += `<p>${p.d.row}</p>`;
+      if (p.d.fired) html += `<div class="fired">${p.d.fired.map(f => `<code>${f}</code>`).join("")}</div>`;
+      if (p.d.ai) html += `<p class="ai"><em>RESUMEN IA</em>${p.d.ai}</p>`;
+      if (p.d.call) html += `<div class="act"><button class="primary" type="button" data-act="contact">${contacted ? "Contactado 08:09 ✓" : "Llamar al paciente"}</button><button type="button">Ver conversación</button></div>`;
+    }
+    html += `</div>`;
+    r.innerHTML = html;
+    rows.appendChild(r);
+  });
+  const btn = rows.querySelector('[data-act="contact"]');
+  if (btn) btn.addEventListener("click", () => { contacted = true; btn.textContent = "Contactado 08:09 ✓"; });
+  $("t-active").textContent = nActive;
+  $("t-alert").textContent = nA;
+  $("t-watch").textContent = nW;
+  $("rules").innerHTML = RULES.map(r => {
+    const on = firedAll.has(r.id) ? (r.id === "R5" ? "on-watch" : "on") : "";
+    return `<li class="${on}"><code>${r.id}</code><span>${r.text}</span><span class="out">${r.out}</span></li>`;
+  }).join("");
+}
+
+function render(animate){
+  timers.forEach(clearTimeout); timers = [];
+  const id = DAYS[day].id;
+  document.querySelectorAll("#days button").forEach((b,i) => b.setAttribute("aria-pressed", i === day));
+  const pending = {};
+  ["maria","jose"].forEach(k => {
+    const d = P[k][id], chat = $("chat-" + k), chip = $("chip-" + k);
+    chat.innerHTML = "";
+    const nodes = d.msgs.map(bubble);
+    if (!animate){
+      nodes.forEach(n => chat.appendChild(n));
+      chipHTML(chip, d.status);
+      return;
+    }
+    pending[k] = true;
+    chip.className = "chip wait"; chip.textContent = "Respondiendo…";
+    nodes.forEach((n, i) => {
+      timers.push(setTimeout(() => {
+        n.classList.add("in"); chat.appendChild(n);
+        if (i === nodes.length - 1){
+          chipHTML(chip, d.status);
+          delete pending[k];
+          renderPanel(pending);
+        }
+      }, 500 + i * 1100));
+    });
+  });
+  renderPanel(animate ? pending : null);
+}
+
+DAYS.forEach((d, i) => {
+  const b = document.createElement("button");
+  b.type = "button"; b.textContent = d.label;
+  b.addEventListener("click", () => { day = i; render(false); });
+  $("days").appendChild(b);
+});
+$("play").addEventListener("click", () => render(true));
+render(false);
+</script>
+</body>
+</html>
